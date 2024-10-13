@@ -16,8 +16,17 @@ import router from './router'
 const app = createApp(App)
 
 const vuetify = createVuetify({
+  theme: {
+    themes: {
+      light: {
+        colors: {
+          customGreen: '#006400' // Define custom color here
+        }
+      }
+    }
+  },
   icons: {
-    defaultSet: 'mdi' // This is already the default value - only for display purposes
+    defaultSet: 'mdi' // Material Design Icons
   },
   components,
   directives
