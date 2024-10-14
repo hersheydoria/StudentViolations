@@ -20,7 +20,7 @@ const vuetify = createVuetify({
     themes: {
       light: {
         colors: {
-          customGreen: '#006400' // Define custom color here
+          customGreen: '#286643' // Define custom color here
         }
       }
     }
