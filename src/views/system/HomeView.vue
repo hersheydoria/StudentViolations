@@ -89,8 +89,11 @@ const toggleLeftSidebar = () => {
         <v-btn icon @click="toggleLeftSidebar">
           <v-icon>mdi-menu</v-icon>
         </v-btn>
-
-        <v-toolbar-title>Student Violation System</v-toolbar-title>
+        <v-avatar size="50" class="mx-auto">
+          <!-- Increased profile picture size -->
+          <v-img src="logo6.png" alt="Logo" />
+        </v-avatar>
+        <v-toolbar-title>Home Page</v-toolbar-title>
         <v-spacer></v-spacer>
       </v-app-bar>
 
