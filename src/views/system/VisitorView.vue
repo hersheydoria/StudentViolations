@@ -342,7 +342,7 @@ watch(studentID, (newVal) => {
             </v-table>
           </v-card-text>
           <v-card-actions>
-            <v-btn @click="closeModal" color="black" style="color: white">Close</v-btn>
+            <v-btn @click="closeModal" color="customGreen">Close</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>

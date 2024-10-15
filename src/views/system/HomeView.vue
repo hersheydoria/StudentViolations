@@ -229,7 +229,7 @@ const toggleLeftSidebar = () => {
               </v-card-text>
               <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn @click="showViewHistory = false" color="grey">Close</v-btn>
+                <v-btn @click="showViewHistory = false" color="customGreen">Close</v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
