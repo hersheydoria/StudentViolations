@@ -33,19 +33,21 @@ const showAbout = ref(false)
       <v-card-title class="text-h5"><strong>About the Developers</strong></v-card-title>
       <v-card-text>
         <p>
-          <strong>System Analyst:</strong> Rovannah E. Delola
-          <!-- GitHub and WhatsApp for Lead Developer -->
+          <strong>System Analyst:</strong> May Estroga
+          <!-- GitHub and WhatsApp for Analyst -->
           <v-spacer></v-spacer>
-          <a href="https://github.com/rovannahdelola" target="_blank" class="ml-2">
+
+          <a href="https://github.com/mayestroga" target="_blank" class="ml-2">
             <v-icon color="black">mdi-github</v-icon>
           </a>
-          <a href="https://wa.me/+639060316074" target="_blank" class="ml-2">
+          <a href="https://wa.me/+639975000713" target="_blank" class="ml-2">
             <v-icon color="green">mdi-whatsapp</v-icon>
           </a>
         </p>
+
         <p>
           <strong>Lead Developer:</strong> Hershey C. Doria
-          <!-- GitHub and WhatsApp for Analyst -->
+          <!-- GitHub and WhatsApp for Lead developer -->
           <v-spacer></v-spacer>
           <a href="https://github.com/hersheydoria" target="_blank" class="ml-2">
             <v-icon color="black">mdi-github</v-icon>
@@ -54,16 +56,14 @@ const showAbout = ref(false)
             <v-icon color="green">mdi-whatsapp</v-icon>
           </a>
         </p>
-
         <p>
-          <strong>Frontend Developer:</strong> May Estroga
+          <strong>Frontend Developer:</strong> Rovannah E. Delola
           <!-- GitHub and WhatsApp for Frontend Developer -->
           <v-spacer></v-spacer>
-
-          <a href="https://github.com/mayestroga" target="_blank" class="ml-2">
+          <a href="https://github.com/rovannahdelola" target="_blank" class="ml-2">
             <v-icon color="black">mdi-github</v-icon>
           </a>
-          <a href="https://wa.me/+639975000713" target="_blank" class="ml-2">
+          <a href="https://wa.me/+639060316074" target="_blank" class="ml-2">
             <v-icon color="green">mdi-whatsapp</v-icon>
           </a>
         </p>
