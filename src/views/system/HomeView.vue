@@ -1,84 +1,35 @@
 <script setup>
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useViolationRecords } from '@/stores/useViolationRecords'
+import { QrcodeStream } from 'vue3-qrcode-reader'
 
-// Reactive variables
-const router = useRouter()
-const showForm = ref(false)
-const showLeftSidebar = ref(false)
-const newViolation = ref({
-  studentId: '',
-  type: ''
-})
-const violations = ref([]) // Current violation data
-const history = ref([]) // History of violations
-const headers = [
-  { text: 'Student ID', value: 'studentId' },
-  { text: 'Violation Type', value: 'type' },
-  { text: 'Date', value: 'date' },
-  { text: 'Recorded By', value: 'recordedBy' },
-  { text: 'Status', value: 'status' },
-  { text: 'Action', value: 'action', sortable: false }
-]
-const violationTypes = [
-  'Dress Code',
-  'Disruption Obstruction',
-  'Gambling',
-  'Bribery Receiving Bribe',
-  'Having Abusive Affiliation',
-  'Blocking Publication',
-  'Disregard Code Conduct',
-  'Abuse Code Ceremony',
-  'Violating Policies',
-  'Ignoring Flag Ceremony',
-  'Not Wearing ID'
-]
-
-// State variables for modals
-const showViewHistory = ref(false)
-
-// Methods
-const addViolation = () => {
-  violations.value.push({
-    id: violations.value.length + 1, // Example ID generation
-    studentId: newViolation.value.studentId,
-    type: newViolation.value.type,
-    date: new Date().toLocaleDateString(), // Add current date
-    recordedBy: 'Guard', // Example recordedBy, adjust as needed
-    status: 'Blocked' // Initial status
-  })
-  newViolation.value.studentId = ''
-  newViolation.value.type = ''
-  showForm.value = false
-}
-
-// Method to unblock a violation
-const unblockViolation = (violationId) => {
-  const index = violations.value.findIndex((v) => v.id === violationId)
-  if (index !== -1) {
-    const unblockedViolation = violations.value[index]
-    unblockedViolation.status = 'Unblocked' // Change status to 'Unblocked'
-    history.value.push(unblockedViolation) // Add to history
-    violations.value.splice(index, 1) // Remove from current violations
-  }
-}
-
-// Logout method
-const logout = () => {
-  localStorage.removeItem('authToken') // Clear any token or session data
-  router.push('/login') // Redirect to login page after logout
-}
-
-// Method to show history
-const showHistory = () => {
-  showViewHistory.value = true // Show history modal
-}
-
-// Toggle Left Sidebar
-const toggleLeftSidebar = () => {
-  showLeftSidebar.value = !showLeftSidebar.value
-}
+// Use the composable to get access to the methods and state
+const {
+  showForm,
+  showLeftSidebar,
+  newViolation,
+  violations,
+  history,
+  headers,
+  violationTypes,
+  addViolation,
+  unblockViolation,
+  logout,
+  showViewHistory,
+  toggleViewHistory,
+  toggleLeftSidebar,
+  valid,
+  selectedMethod,
+  showQrScanner,
+  showStudentInfoModal,
+  selectedStudent,
+  user,
+  onNameInput,
+  showStudentDetails,
+  onQrCodeScanned,
+  onInit,
+  onError
+} = useViolationRecords()
 </script>
 
 <template>
@@ -89,7 +40,6 @@ const toggleLeftSidebar = () => {
           <v-icon>mdi-menu</v-icon>
         </v-btn>
         <v-avatar size="50" class="mx-auto">
-          <!-- Increased profile picture size -->
           <v-img src="logo6.png" alt="Logo" />
         </v-avatar>
         <v-toolbar-title>Home Page</v-toolbar-title>
@@ -107,21 +57,20 @@ const toggleLeftSidebar = () => {
         <v-list>
           <v-list-item class="text-center">
             <v-avatar size="150" class="mx-auto">
-              <!-- Increased profile picture size -->
               <v-img src="account.jpg" alt="Profile Picture" />
             </v-avatar>
           </v-list-item>
           <v-list-item>
-            <p><strong>ID Number:</strong></p>
+            <p><strong>ID Number:</strong> {{ user?.idNumber || 'N/A' }}</p>
           </v-list-item>
           <v-list-item>
-            <p><strong>Name:</strong></p>
+            <p><strong>Name:</strong> {{ user?.name || 'N/A' }}</p>
           </v-list-item>
           <v-list-item>
-            <p><strong>Email:</strong></p>
+            <p><strong>Email:</strong> {{ user?.email || 'N/A' }}</p>
           </v-list-item>
           <v-list-item>
-            <p><strong>Role:</strong></p>
+            <p><strong>Role:</strong> {{ user?.role || 'N/A' }}</p>
           </v-list-item>
           <v-divider></v-divider>
           <v-list-item @click="logout">Logout</v-list-item>
@@ -142,7 +91,7 @@ const toggleLeftSidebar = () => {
             </v-col>
             <v-col cols="auto">
               <v-btn
-                @click="showHistory"
+                @click="toggleViewHistory"
                 color="#286643"
                 style="color: white; border: 2px solid #e6ffb1"
               >
@@ -151,6 +100,7 @@ const toggleLeftSidebar = () => {
             </v-col>
           </v-row>
 
+          <!-- Violation Records Table -->
           <v-row>
             <v-col cols="12">
               <v-data-table
@@ -167,13 +117,49 @@ const toggleLeftSidebar = () => {
                   </v-toolbar>
                 </template>
 
-                <!-- This is where you define the custom slot for the "Action" column -->
+                <template v-slot:item.studentId="{ item }">
+                  <v-btn @click="showStudentDetails(item.studentId)" text color="green">
+                    {{ item.studentId || newViolation.studentId }}
+                    <!-- Ensure this line gets the correct ID -->
+                  </v-btn>
+                </template>
+
                 <template v-slot:item.action="{ item }">
                   <v-btn @click="unblockViolation(item.id)" color="green">UNBLOCK</v-btn>
                 </template>
               </v-data-table>
             </v-col>
           </v-row>
+
+          <v-dialog
+            v-model="showStudentInfoModal"
+            max-width="600px"
+            elevation="10"
+            style="backdrop-filter: blur(8px)"
+          >
+            <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
+              <v-card-title class="headline">Student Details</v-card-title>
+              <v-card-text>
+                <v-row>
+                  <v-col cols="12" class="text-center">
+                    <v-avatar size="100">
+                      <v-img :src="selectedStudent.picture" alt="Profile Picture" />
+                    </v-avatar>
+                  </v-col>
+                  <v-col cols="12">
+                    <p><strong>Name:</strong> {{ selectedStudent.name }}</p>
+                    <p><strong>Address:</strong> {{ selectedStudent.address }}</p>
+                    <p><strong>Birthday:</strong> {{ selectedStudent.birthday }}</p>
+                    <p><strong>Program & Year:</strong> {{ selectedStudent.programYear }}</p>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn @click="showStudentInfoModal = false">Close</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
 
           <!-- Add Violation Modal -->
           <v-dialog
@@ -186,11 +172,48 @@ const toggleLeftSidebar = () => {
               <v-card-title class="headline"><strong>ADD VIOLATION</strong></v-card-title>
               <v-card-text>
                 <v-form v-model="valid" lazy-validation>
+                  <!-- Input method selection -->
+                  <v-radio-group v-model="selectedMethod" label="Add Violation By">
+                    <v-radio label="ID Number" value="idNumber" />
+                    <v-radio label="Name" value="name" />
+                    <v-radio label="QR Code" value="qrCode" />
+                  </v-radio-group>
+
+                  <!-- Conditionally show input fields based on selected method -->
                   <v-text-field
+                    v-if="selectedMethod === 'idNumber'"
                     label="ID Number"
                     v-model="newViolation.studentId"
                     required
+                    type="text"
+                    :rules="[(v) => /^[0-9-]+$/.test(v) || 'Only numbers and hyphens are allowed']"
                   ></v-text-field>
+
+                  <v-text-field
+                    v-if="selectedMethod === 'name'"
+                    label="Name"
+                    v-model="newViolation.name"
+                    required
+                    @input="onNameInput"
+                  ></v-text-field>
+
+                  <!-- QR Code Scanner button -->
+                  <v-btn
+                    v-if="selectedMethod === 'qrCode'"
+                    @click="showQrScanner = true"
+                    color="#286643"
+                    style="color: white; border: 2px solid #e6ffb1; margin-bottom: 10px"
+                  >
+                    Open QR Code Scanner
+                  </v-btn>
+                  <!-- Display scanned ID if it exists -->
+                  <div v-if="newViolation.studentId" class="mt-2">
+                    <p>
+                      Scanned Student ID: <strong>{{ newViolation.studentId }}</strong>
+                    </p>
+                  </div>
+
+                  <!-- Violation Type Select -->
                   <v-select
                     label="Violation Type"
                     v-model="newViolation.type"
@@ -202,7 +225,26 @@ const toggleLeftSidebar = () => {
               <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn @click="showForm = false" color="grey">Cancel</v-btn>
-                <v-btn @click="addViolation" color="customGreen">Add</v-btn>
+                <v-btn @click="addViolation" :disabled="!valid" color="customGreen">Add</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+          <!-- QR Code Scanner Modal -->
+          <v-dialog
+            v-model="showQrScanner"
+            max-width="600px"
+            elevation="10"
+            style="backdrop-filter: blur(8px)"
+          >
+            <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
+              <v-card-title>Scan QR Code</v-card-title>
+              <v-card-text>
+                <QrcodeStream @decode="onQrCodeScanned" @init="onInit" @error="onError" />
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn @click="showQrScanner = false">Close</v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
