@@ -16,6 +16,7 @@ const {
   noRecordMessage,
   historyModalVisible,
   selectedStudent,
+  loading,
   handleEnterClick,
   showHistory,
   closeModal
@@ -27,7 +28,6 @@ const {
     <AppLayout>
       <v-app-bar class="px-3" color="#e6ffb1">
         <v-avatar size="50" class="mx-auto">
-          <!-- Increased profile picture size -->
           <v-img src="logo6.png" alt="Logo" />
         </v-avatar>
         <v-toolbar-title style="color: black">Visitor Page</v-toolbar-title>
@@ -58,119 +58,59 @@ const {
           </template>
         </v-text-field>
 
-        <!-- Table for student records -->
-        <v-table
-          v-if="studentRecords.length > 0"
-          class="mt-4"
-          style="
-            background-color: #e6ffb1;
-            border: 1px solid #5ea34f;
-            border-collapse: collapse;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-          "
-        >
-          <thead>
-            <tr>
-              <th
-                style="
-                  color: black;
-                  padding: 8px;
-                  border: 1px solid green;
-                  font-weight: bold;
-                  font-size: 16px;
-                  text-align: center;
-                "
-              >
-                Student ID
-              </th>
-              <th
-                style="
-                  color: black;
-                  padding: 8px;
-                  border: 1px solid green;
-                  font-weight: bold;
-                  font-size: 16px;
-                  text-align: center;
-                "
-              >
-                Name
-              </th>
-              <th
-                style="
-                  color: black;
-                  padding: 8px;
-                  border: 1px solid green;
-                  font-weight: bold;
-                  font-size: 16px;
-                  text-align: center;
-                "
-              >
-                Violations
-              </th>
-              <th
-                style="
-                  color: black;
-                  padding: 8px;
-                  border: 1px solid green;
-                  font-weight: bold;
-                  font-size: 16px;
-                  text-align: center;
-                "
-              >
-                Date Recorded
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="record in studentRecords" :key="record.id + record.violation">
-              <td
-                style="
-                  color: black;
-                  padding: 8px;
-                  border: 1px solid green;
-                  font-size: 16px;
-                  text-align: center;
-                "
-              >
-                {{ record.id }}
-              </td>
-              <td
-                style="
-                  color: black;
-                  padding: 8px;
-                  border: 1px solid green;
-                  font-size: 16px;
-                  text-align: center;
-                "
-              >
-                {{ record.name }}
-              </td>
-              <td
-                style="
-                  color: black;
-                  padding: 8px;
-                  border: 1px solid green;
-                  font-size: 16px;
-                  text-align: center;
-                "
-              >
-                {{ record.violation }}
-              </td>
-              <td
-                style="
-                  color: black;
-                  padding: 8px;
-                  border: 1px solid green;
-                  font-size: 16px;
-                  text-align: center;
-                "
-              >
-                {{ record.dateRecorded }}
-              </td>
-            </tr>
-          </tbody>
-        </v-table>
+        <!-- Loading Indicator -->
+        <v-progress-linear v-if="loading" indeterminate color="#286643"></v-progress-linear>
+
+        <!-- Violation Records Table -->
+        <v-row>
+          <v-col cols="12">
+            <v-data-table
+              :headers="[
+                { text: 'Violation Type', value: 'violation_type' },
+                { text: 'Recorded By', value: 'guard_name' },
+                { text: 'Date', value: 'violation_date' },
+                { text: 'Status', value: 'status' }
+              ]"
+              :items="studentRecords"
+              item-value="id"
+              class="mt-5"
+              :footer-props="{ 'items-per-page-options': [] }"
+              style="background-color: #e6ffb1"
+            >
+              <!-- Top Slot for Title -->
+              <template #top>
+                <v-toolbar flat style="background-color: #e6ffb1">
+                  <v-toolbar-title><strong>RECORDS</strong></v-toolbar-title>
+                </v-toolbar>
+              </template>
+
+              <!-- Violation Type Slot -->
+              <template v-slot:item.violation_type="{ item }">
+                <span>{{ item.violation_type || 'No Violation Type' }}</span>
+              </template>
+
+              <!-- Guard Name Slot -->
+              <template v-slot:item.guard_name="{ item }">
+                <span>{{ item.guardFullName ? item.guardFullName + ' - Guard' : 'No Data' }}</span>
+              </template>
+
+              <!-- Date Slot -->
+              <template v-slot:item.violation_date="{ item }">
+                <span>{{ new Date(item.violation_date).toLocaleString() || 'No Date' }}</span>
+              </template>
+
+              <!-- Status Slot -->
+              <template v-slot:item.status="{ item }">
+                <span>{{ item.status || 'No Status' }}</span>
+              </template>
+            </v-data-table>
+
+            <!-- View History Button placed after the table -->
+            <v-btn @click="showHistory" color="green" class="mt-3" style="width: 100%">
+              View History
+            </v-btn>
+          </v-col>
+        </v-row>
 
         <!-- Display No Record message if applicable -->
         <div
@@ -180,17 +120,6 @@ const {
         >
           {{ noRecordMessage }}
         </div>
-
-        <!-- View History Button -->
-        <v-btn
-          v-if="studentRecords.length > 0"
-          @click="showHistory(studentRecords[0])"
-          color="#286643"
-          class="mt-16"
-          style="color: white; border: 2px solid #e6ffb1"
-        >
-          View History
-        </v-btn>
       </v-container>
 
       <!-- History Modal -->
@@ -209,25 +138,26 @@ const {
             {{ selectedStudent?.name }}'s Record History
           </v-card-title>
           <v-card-text>
-            <v-table v-if="selectedStudent?.records.length > 0">
-              <thead>
-                <tr>
-                  <th style="padding: 10px; border: 1px solid green; text-align: center">
-                    Violation
-                  </th>
-                  <th style="padding: 10px; border: 1px solid green; text-align: center">
-                    Date Recorded
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="record in selectedStudent.records" :key="record.violation">
-                  <td style="padding: 8px; text-align: center">{{ record.violation }}</td>
-                  <td style="padding: 8px; text-align: center">{{ record.dateRecorded }}</td>
-                </tr>
-              </tbody>
-            </v-table>
-            <!-- Message for no historical record -->
+            <template v-if="selectedStudent?.records && selectedStudent.records.length > 0">
+              <v-data-table
+                :headers="[
+                  { text: 'Violation Type', value: 'violation_type' },
+                  { text: 'Recorded By', value: 'guard_name' },
+                  { text: 'Status', value: 'status' }
+                ]"
+                :items="selectedStudent.records"
+                item-value="id"
+                class="mt-5"
+                :footer-props="{ 'items-per-page-options': [] }"
+              >
+                <!-- Guard Name Slot -->
+                <template v-slot:item.guard_name="{ item }">
+                  <span>{{
+                    item.guardFullName ? item.guardFullName + ' - Guard' : 'No Data'
+                  }}</span>
+                </template>
+              </v-data-table>
+            </template>
             <div v-else style="color: black; font-weight: bold; text-align: center">
               No historical record
             </div>
@@ -237,8 +167,9 @@ const {
               @click="closeModal"
               color="#286643"
               style="color: white; border: 2px solid #e6ffb1; margin: auto"
-              >Close</v-btn
             >
+              Close
+            </v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>

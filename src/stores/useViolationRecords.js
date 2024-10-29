@@ -29,13 +29,15 @@ export function useViolationRecords() {
   const loading = ref(false)
 
   const headers = [
-    { text: 'Student ID', value: 'studentId' },
-    { text: 'Violation Type', value: 'type' },
-    { text: 'Date', value: 'date' },
-    { text: 'Recorded By', value: 'recordedBy' },
+    { text: 'Student ID', value: 'student_id' },
+    { text: 'Violation Type', value: 'violation_type' },
+    { text: 'Date', value: 'violation_date' },
+    { text: 'Recorded By', value: 'guard_name' },
     { text: 'Status', value: 'status' },
     { text: 'Action', value: 'action', sortable: false }
   ]
+  console.log('Headers: ', headers)
+  console.log('Violations: ', violations)
 
   const violationTypes = [
     'Abuse Code Ceremony',
@@ -249,11 +251,28 @@ export function useViolationRecords() {
   const addViolation = async () => {
     await getUser() // Ensure user data is fetched before proceeding
 
-    const studentInfo =
-      selectedMethod.value === 'idNumber'
-        ? newViolation.value.studentId
-        : newViolation.value.studentName
+    let studentInfo // Declare studentInfo to hold the student ID
 
+    // Determine the student information based on the selected method
+    if (selectedMethod.value === 'idNumber') {
+      studentInfo = newViolation.value.studentId // Student ID directly
+    } else if (selectedMethod.value === 'name') {
+      const firstName = newViolation.value.firstName
+      const lastName = newViolation.value.lastName
+
+      // Fetch student by name to get the student ID
+      const student = await getStudentByName(firstName, lastName)
+      if (student) {
+        studentInfo = student.student_number // Assuming student_number holds the ID
+      } else {
+        alert(`Student ${firstName} ${lastName} not found.`)
+        return // Exit if the student is not found
+      }
+    } else {
+      studentInfo = newViolation.value.studentId // For QR code, it uses student_id
+    }
+
+    // Check for required information
     if (!studentInfo || !newViolation.value.type) {
       alert('Please provide both Student Info and Violation Type.')
       return
@@ -300,6 +319,23 @@ export function useViolationRecords() {
       console.error('Error details:', err.response?.data || err.message)
       alert('Failed to save the violation: ' + (err.response?.data.message || err.message))
     }
+  }
+
+  // Function to get a student by first name and last name
+  const getStudentByName = async (firstName, lastName) => {
+    const { data, error } = await supabase
+      .from('students')
+      .select('student_number')
+      .eq('first_name', firstName)
+      .eq('last_name', lastName)
+      .single() // Get a single record
+
+    if (error) {
+      console.error(`Error fetching student data for ${firstName} ${lastName}`, error)
+      return null
+    }
+
+    return data // Should return the student record including student_number
   }
 
   const resetForm = () => {
@@ -401,6 +437,29 @@ export function useViolationRecords() {
     alert('Failed to scan QR code. Please try again.')
   }
 
+  // In your useViolationRecords.js
+  const removeViolation = async (id) => {
+    const { data, error } = await supabase.from('student_violations').delete().eq('id', id)
+
+    if (error) throw error
+    return data
+  }
+
+  // Format date function
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    const options = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true // Use 12-hour format
+    }
+    return date.toLocaleString('en-US', options)
+  }
+
   return {
     showForm,
     showLeftSidebar,
@@ -416,6 +475,7 @@ export function useViolationRecords() {
     headers,
     violationTypes,
     user,
+    formatDate,
     addViolation,
     resetForm,
     unblockViolation,
@@ -427,6 +487,7 @@ export function useViolationRecords() {
     showStudentDetails,
     onQrCodeScanned,
     onError,
-    fetchViolations
+    fetchViolations,
+    removeViolation
   }
 }

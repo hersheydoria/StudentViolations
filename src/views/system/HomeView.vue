@@ -25,17 +25,29 @@ const {
   showStudentInfoModal,
   selectedStudent,
   fetchViolations, // Fetch violations on mount
-  onNameInput,
   showStudentDetails,
   onQrCodeScanned,
   onError,
-  user
+  user,
+  removeViolation,
+  formatDate
 } = useViolationRecords()
 
 // Fetch violations on component mount
 onMounted(() => {
   fetchViolations()
 })
+
+// Function to remove a violation
+const onRemoveViolation = async (id) => {
+  try {
+    await removeViolation(id) // Call the function to remove from Supabase
+    // Filter out the removed violation from the local state
+    violations.value = violations.value.filter((violation) => violation.id !== id)
+  } catch (error) {
+    console.error('Error removing violation:', error)
+  }
+}
 </script>
 
 <template>
@@ -115,14 +127,7 @@ onMounted(() => {
           <v-row>
             <v-col cols="12">
               <v-data-table
-                :headers="[
-                  { text: 'Student ID', value: 'student_id' },
-                  { text: 'Violation Type', value: 'violation_type' },
-                  { text: 'Recorded By', value: 'guard_name' },
-                  { text: 'Date', value: 'violation_date' },
-                  { text: 'Status', value: 'status' },
-                  { text: 'Action', value: 'action', sortable: false }
-                ]"
+                :headers="headers"
                 :items="violations"
                 item-value="id"
                 class="mt-5"
@@ -153,12 +158,14 @@ onMounted(() => {
 
                 <!-- Guard Name Slot -->
                 <template v-slot:item.guard_name="{ item }">
-                  <span>{{ item.guardFullName || 'No Data' }}</span>
+                  <span>{{
+                    item.guardFullName ? item.guardFullName + ' - Guard' : 'No Data'
+                  }}</span>
                 </template>
 
                 <!-- Date Slot -->
-                <template v-slot:item.violationDate="{ item }">
-                  <span>{{ item.violation_date || 'No Date' }}</span>
+                <template v-slot:item.violation_date="{ item }">
+                  <span>{{ formatDate(item.violation_date) || 'No Date' }}</span>
                 </template>
 
                 <!-- Status Slot -->
@@ -168,7 +175,10 @@ onMounted(() => {
 
                 <!-- Slot for Action Button -->
                 <template v-slot:item.action="{ item }">
-                  <v-btn @click="unblockViolation(item.id)" color="green">UNBLOCK</v-btn>
+                  <v-btn @click="unblockViolation(item.id)" color="green" style="margin-right: 10px"
+                    >UNBLOCK</v-btn
+                  >
+                  <v-btn @click="onRemoveViolation(item.id)" color="red">REMOVE</v-btn>
                 </template>
               </v-data-table>
             </v-col>
@@ -206,7 +216,6 @@ onMounted(() => {
             </v-card>
           </v-dialog>
 
-          <!-- Add Violation Modal -->
           <v-dialog
             v-model="showForm"
             max-width="600px"
@@ -232,13 +241,19 @@ onMounted(() => {
                     :rules="[(v) => /^[0-9-]+$/.test(v) || 'Only numbers and hyphens are allowed']"
                   ></v-text-field>
 
-                  <v-text-field
-                    v-if="selectedMethod === 'name'"
-                    label="Name"
-                    v-model="newViolation.name"
-                    required
-                    @input="onNameInput"
-                  ></v-text-field>
+                  <div v-if="selectedMethod === 'name'">
+                    <v-text-field
+                      label="First Name"
+                      v-model="newViolation.firstName"
+                      required
+                    ></v-text-field>
+
+                    <v-text-field
+                      label="Last Name"
+                      v-model="newViolation.lastName"
+                      required
+                    ></v-text-field>
+                  </div>
 
                   <v-btn
                     v-if="selectedMethod === 'qrCode'"
@@ -248,6 +263,7 @@ onMounted(() => {
                   >
                     Open QR Code Scanner
                   </v-btn>
+
                   <div v-if="newViolation.studentId" class="mt-2">
                     <p>
                       Scanned Student ID: <strong>{{ newViolation.studentId }}</strong>
@@ -350,5 +366,12 @@ onMounted(() => {
   background-color: #286643;
   color: white;
   border: 2px solid #e6ffb1;
+}
+/* Ensure headers are visible */
+.v-data-table-header th {
+  display: table-cell !important;
+  color: #333 !important; /* Change color to be visible */
+  font-weight: bold;
+  background-color: #f5f5f5; /* Light background for contrast */
 }
 </style>

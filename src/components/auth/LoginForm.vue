@@ -50,6 +50,19 @@ onMounted(async () => {
       localStorage.removeItem('authUser')
     }
   })
+
+  // Add keydown event listener for Enter key
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      if (forgotPasswordDialog.value) {
+        // If the forgot password dialog is open, handle reset password
+        onResetPassword()
+      } else {
+        // Otherwise, attempt to log in
+        onLogin()
+      }
+    }
+  })
 })
 
 // Login function

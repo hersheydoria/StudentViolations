@@ -43,6 +43,10 @@ const showAbout = ref(false)
           <a href="https://wa.me/+639975000713" target="_blank" class="ml-2">
             <v-icon color="green">mdi-whatsapp</v-icon>
           </a>
+          <a href="https://mayestroga.github.io" target="_blank" class="ml-2">
+            <v-icon color="black">mdi-web</v-icon>
+            <!-- Website icon -->
+          </a>
         </p>
 
         <p>
@@ -55,6 +59,10 @@ const showAbout = ref(false)
           <a href="https://wa.me/+639700919275" target="_blank" class="ml-2">
             <v-icon color="green">mdi-whatsapp</v-icon>
           </a>
+          <a href="https://hersheydoria.github.io" target="_blank" class="ml-2">
+            <v-icon color="black">mdi-web</v-icon>
+            <!-- Website icon -->
+          </a>
         </p>
         <p>
           <strong>Frontend Developer:</strong> Rovannah E. Delola
@@ -65,6 +73,10 @@ const showAbout = ref(false)
           </a>
           <a href="https://wa.me/+639060316074" target="_blank" class="ml-2">
             <v-icon color="green">mdi-whatsapp</v-icon>
+          </a>
+          <a href="https://rovannahdelola.github.io" target="_blank" class="ml-2">
+            <v-icon color="black">mdi-web</v-icon>
+            <!-- Website icon -->
           </a>
         </p>
       </v-card-text>
