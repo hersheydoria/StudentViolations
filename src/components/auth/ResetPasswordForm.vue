@@ -1,7 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-//import { supabase } from './supabase' // Uncomment and use Supabase properly in your setup
+import { createClient } from '@supabase/supabase-js'
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+// Initialize Supabase client
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const route = useRoute()
 const router = useRouter()
@@ -33,10 +39,11 @@ onMounted(() => {
 
 // Reset password logic
 async function onSetNewPassword() {
-  if (valid.value) {
+  if (valid.value && resetToken.value) {
     try {
       const { error } = await supabase.auth.updateUser({
-        password: newPassword.value
+        password: newPassword.value,
+        access_token: resetToken.value // Include the reset token here
       })
 
       if (error) {
@@ -44,7 +51,7 @@ async function onSetNewPassword() {
         console.error('Error resetting password:', error)
       } else {
         passwordResetSuccess.value = true
-        router.push('/login')
+        setTimeout(() => router.push('/login'), 3000) // Redirect after showing success message for a few seconds
       }
     } catch (err) {
       errorMessage.value = 'An unexpected error occurred. Please try again.'

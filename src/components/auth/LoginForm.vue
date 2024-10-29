@@ -1,39 +1,86 @@
 <script setup>
-import { ref } from 'vue'
-//import { supabase } from './supabase' // Import Supabase client
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { createClient } from '@supabase/supabase-js'
 
-// Form data
-const userId = ref('')
+// Initialize Supabase client with correct keys
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+
+// Form data and states
+const email = ref('')
 const password = ref('')
 const valid = ref(true)
+const loading = ref(false)
+const errorMessage = ref('')
 
 // Forgot Password modal
 const forgotPasswordDialog = ref(false)
-const email = ref('') // Email for password reset
+const emailForReset = ref('') // Email for password reset
 const emailSent = ref(false)
-const errorMessage = ref('')
+
+// Router instance
+const router = useRouter()
 
 // Validation rules
 const rules = {
   required: (value) => !!value || 'Required.',
   passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long',
-  passwordMatch: (v) => v === email.value || 'Passwords must match',
   email: (value) => /.+@.+\..+/.test(value) || 'E-mail must be valid.'
 }
 
-// Router instance
-const router = useRouter()
+// Mounted lifecycle to check session status
+onMounted(async () => {
+  const {
+    data: { session }
+  } = await supabase.auth.getSession()
 
-// Login logic
-function onLogin() {
-  if (valid.value) {
-    console.log('User ID:', userId.value)
-    console.log('Password:', password.value)
+  if (session && session.user) {
     router.push('/home')
+  }
+
+  // Listen for auth state changes
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      localStorage.setItem('authUser', JSON.stringify(session.user))
+      router.push('/home')
+    } else if (event === 'SIGNED_OUT') {
+      localStorage.removeItem('authUser')
+    }
+  })
+})
+
+// Login function
+async function onLogin() {
+  errorMessage.value = ''
+  loading.value = true
+
+  if (valid.value) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.value,
+        password: password.value
+      })
+
+      if (error) {
+        errorMessage.value = 'Invalid login credentials'
+        console.error('Login error:', error.message)
+      } else {
+        console.log('Access Token:', data.session.access_token)
+
+        router.push('/home')
+      }
+    } catch (error) {
+      errorMessage.value = 'An unexpected error occurred'
+      console.error('Unexpected error:', error)
+    }
   } else {
     console.log('Invalid form')
   }
+
+  loading.value = false
 }
 
 // Open Forgot Password modal
@@ -41,12 +88,12 @@ function onForgotPassword() {
   forgotPasswordDialog.value = true
 }
 
-// Reset password logic using Supabase
+// Reset password function
 async function onResetPassword() {
   if (valid.value) {
     try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email.value, {
-        redirectTo: 'http://localhost:3000/reset-password' // URL for the reset page
+      const { error } = await supabase.auth.resetPasswordForEmail(emailForReset.value, {
+        redirectTo: 'http://student-violations.vercel.app/reset-password'
       })
 
       if (error) {
@@ -54,9 +101,10 @@ async function onResetPassword() {
       }
 
       emailSent.value = true
-      forgotPasswordDialog.value = false // Close modal after success
+      forgotPasswordDialog.value = false
     } catch (error) {
       errorMessage.value = error.message
+      console.error('Password reset error:', error)
     }
   }
 }
@@ -64,12 +112,12 @@ async function onResetPassword() {
 
 <template>
   <v-form v-model="valid" lazy-validation>
-    <!-- User ID field -->
+    <!-- Email field -->
     <v-text-field
-      v-model="userId"
-      :rules="[rules.required]"
-      label="User ID"
-      prepend-icon="mdi-account"
+      v-model="email"
+      :rules="[rules.required, rules.email]"
+      label="Email"
+      prepend-icon="mdi-email"
       required
     ></v-text-field>
 
@@ -83,7 +131,12 @@ async function onResetPassword() {
       required
     ></v-text-field>
 
-    <!-- Add message below the form -->
+    <!-- Display error message below form if login fails -->
+    <v-alert v-if="errorMessage" type="error" class="mt-4">
+      {{ errorMessage }}
+    </v-alert>
+
+    <!-- Additional message -->
     <v-alert type="info" color="customGreen" text class="mt-4 mb-4">
       <strong>Note:</strong> Only guards registered in the organization or school can sign in.
       Students should go to the
@@ -108,10 +161,10 @@ async function onResetPassword() {
           Forgot Password?
         </span>
       </v-col>
-      <!-- Add a spacer to push the Forgot Password link to the right -->
       <v-spacer></v-spacer>
       <v-col class="text-right">
         <v-btn
+          :loading="loading"
           color="customGreen"
           @click="onLogin"
           style="width: 90px; height: 40px; font-size: 18px"
@@ -131,10 +184,9 @@ async function onResetPassword() {
       <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
         <v-card-title class="headline"><strong>Reset Password</strong></v-card-title>
         <v-card-text>
-          <!-- Enter email for password reset -->
           <v-form v-model="valid" lazy-validation>
             <v-text-field
-              v-model="email"
+              v-model="emailForReset"
               :rules="[rules.required, rules.email]"
               label="Email"
               prepend-icon="mdi-email"
@@ -142,12 +194,10 @@ async function onResetPassword() {
             ></v-text-field>
           </v-form>
 
-          <!-- Show success message if the email has been sent -->
           <v-alert v-if="emailSent" type="success" class="mt-4">
             A password reset link has been sent to your email.
           </v-alert>
 
-          <!-- Show error message if there was an error -->
           <v-alert v-if="errorMessage" type="error" class="mt-4">
             {{ errorMessage }}
           </v-alert>

@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useViolationRecords } from '@/stores/useViolationRecords'
 import { QrcodeStream } from 'vue3-qrcode-reader'
@@ -23,13 +24,18 @@ const {
   showQrScanner,
   showStudentInfoModal,
   selectedStudent,
-  user,
+  fetchViolations, // Fetch violations on mount
   onNameInput,
   showStudentDetails,
   onQrCodeScanned,
-  onInit,
-  onError
+  onError,
+  user
 } = useViolationRecords()
+
+// Fetch violations on component mount
+onMounted(() => {
+  fetchViolations()
+})
 </script>
 
 <template>
@@ -60,20 +66,25 @@ const {
               <v-img src="account.jpg" alt="Profile Picture" />
             </v-avatar>
           </v-list-item>
-          <v-list-item>
-            <p><strong>ID Number:</strong> {{ user?.idNumber || 'N/A' }}</p>
+          <v-list-item v-if="user">
+            <p><strong>ID Number:</strong> {{ user.idNumber }}</p>
           </v-list-item>
-          <v-list-item>
-            <p><strong>Name:</strong> {{ user?.name || 'N/A' }}</p>
+          <v-list-item v-if="user">
+            <p><strong>Name:</strong> {{ user.fullname }}</p>
           </v-list-item>
-          <v-list-item>
-            <p><strong>Email:</strong> {{ user?.email || 'N/A' }}</p>
+          <v-list-item v-if="user">
+            <p><strong>Email:</strong> {{ user.email }}</p>
           </v-list-item>
-          <v-list-item>
-            <p><strong>Role:</strong> {{ user?.role || 'N/A' }}</p>
+          <v-list-item v-if="user">
+            <p><strong>Role:</strong> {{ user.role }}</p>
           </v-list-item>
-          <v-divider></v-divider>
-          <v-list-item @click="logout">Logout</v-list-item>
+          <v-list-item v-if="user">
+            <v-divider></v-divider>
+            <v-list-item @click="logout">Logout</v-list-item>
+          </v-list-item>
+          <v-list-item v-else>
+            <p>No user currently signed in.</p>
+          </v-list-item>
         </v-list>
       </v-navigation-drawer>
 
@@ -104,26 +115,58 @@ const {
           <v-row>
             <v-col cols="12">
               <v-data-table
-                :headers="headers"
+                :headers="[
+                  { text: 'Student ID', value: 'student_id' },
+                  { text: 'Violation Type', value: 'violation_type' },
+                  { text: 'Recorded By', value: 'guard_name' },
+                  { text: 'Date', value: 'violation_date' },
+                  { text: 'Status', value: 'status' },
+                  { text: 'Action', value: 'action', sortable: false }
+                ]"
                 :items="violations"
                 item-value="id"
                 class="mt-5"
                 :footer-props="{ 'items-per-page-options': [] }"
                 style="background-color: #e6ffb1"
               >
+                <!-- Top Slot for Title -->
                 <template #top>
                   <v-toolbar flat style="background-color: #e6ffb1">
                     <v-toolbar-title><strong>RECORDS</strong></v-toolbar-title>
                   </v-toolbar>
                 </template>
 
-                <template v-slot:item.studentId="{ item }">
-                  <v-btn @click="showStudentDetails(item.studentId)" text color="green">
-                    {{ item.studentId || newViolation.studentId }}
-                    <!-- Ensure this line gets the correct ID -->
-                  </v-btn>
+                <!-- Student ID Slot with Details -->
+                <template v-slot:item.student_id="{ item }">
+                  <span v-if="item.student_id">
+                    <v-btn @click="showStudentDetails(item.student_id)" color="green" text>
+                      {{ item.student_id }}
+                    </v-btn>
+                  </span>
+                  <span v-else>No Student Data</span>
                 </template>
 
+                <!-- Violation Type Slot -->
+                <template v-slot:item.violation_type="{ item }">
+                  <span>{{ item.violation_type || 'No Violation Type' }}</span>
+                </template>
+
+                <!-- Guard Name Slot -->
+                <template v-slot:item.guard_name="{ item }">
+                  <span>{{ item.guardFullName || 'No Data' }}</span>
+                </template>
+
+                <!-- Date Slot -->
+                <template v-slot:item.violationDate="{ item }">
+                  <span>{{ item.violation_date || 'No Date' }}</span>
+                </template>
+
+                <!-- Status Slot -->
+                <template v-slot:item.status="{ item }">
+                  <span>{{ item.status || 'No Status' }}</span>
+                </template>
+
+                <!-- Slot for Action Button -->
                 <template v-slot:item.action="{ item }">
                   <v-btn @click="unblockViolation(item.id)" color="green">UNBLOCK</v-btn>
                 </template>
@@ -131,6 +174,7 @@ const {
             </v-col>
           </v-row>
 
+          <!-- Student Info Modal -->
           <v-dialog
             v-model="showStudentInfoModal"
             max-width="600px"
@@ -143,14 +187,15 @@ const {
                 <v-row>
                   <v-col cols="12" class="text-center">
                     <v-avatar size="100">
-                      <v-img :src="selectedStudent.picture" alt="Profile Picture" />
+                      <v-img :src="selectedStudent.image" alt="Profile Picture" />
                     </v-avatar>
                   </v-col>
                   <v-col cols="12">
-                    <p><strong>Name:</strong> {{ selectedStudent.name }}</p>
+                    <p><strong>Name:</strong> {{ selectedStudent.fullname }}</p>
                     <p><strong>Address:</strong> {{ selectedStudent.address }}</p>
                     <p><strong>Birthday:</strong> {{ selectedStudent.birthday }}</p>
-                    <p><strong>Program & Year:</strong> {{ selectedStudent.programYear }}</p>
+                    <p><strong>Program:</strong> {{ selectedStudent.program }}</p>
+                    <p><strong>Year:</strong> {{ selectedStudent.year }}</p>
                   </v-col>
                 </v-row>
               </v-card-text>
@@ -172,14 +217,12 @@ const {
               <v-card-title class="headline"><strong>ADD VIOLATION</strong></v-card-title>
               <v-card-text>
                 <v-form v-model="valid" lazy-validation>
-                  <!-- Input method selection -->
                   <v-radio-group v-model="selectedMethod" label="Add Violation By">
                     <v-radio label="ID Number" value="idNumber" />
                     <v-radio label="Name" value="name" />
                     <v-radio label="QR Code" value="qrCode" />
                   </v-radio-group>
 
-                  <!-- Conditionally show input fields based on selected method -->
                   <v-text-field
                     v-if="selectedMethod === 'idNumber'"
                     label="ID Number"
@@ -197,7 +240,6 @@ const {
                     @input="onNameInput"
                   ></v-text-field>
 
-                  <!-- QR Code Scanner button -->
                   <v-btn
                     v-if="selectedMethod === 'qrCode'"
                     @click="showQrScanner = true"
@@ -206,14 +248,12 @@ const {
                   >
                     Open QR Code Scanner
                   </v-btn>
-                  <!-- Display scanned ID if it exists -->
                   <div v-if="newViolation.studentId" class="mt-2">
                     <p>
                       Scanned Student ID: <strong>{{ newViolation.studentId }}</strong>
                     </p>
                   </div>
 
-                  <!-- Violation Type Select -->
                   <v-select
                     label="Violation Type"
                     v-model="newViolation.type"
@@ -225,7 +265,14 @@ const {
               <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn @click="showForm = false" color="grey">Cancel</v-btn>
-                <v-btn @click="addViolation" :disabled="!valid" color="customGreen">Add</v-btn>
+                <v-alert v-if="error" type="error" dense>
+                  {{ error }}
+                </v-alert>
+
+                <v-btn :disabled="!valid || isLoading" @click="addViolation">
+                  <span v-if="isLoading">Adding...</span>
+                  <span v-else>Add</span>
+                </v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -240,7 +287,7 @@ const {
             <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
               <v-card-title>Scan QR Code</v-card-title>
               <v-card-text>
-                <QrcodeStream @decode="onQrCodeScanned" @init="onInit" @error="onError" />
+                <QrcodeStream @decode="onQrCodeScanned" @error="onError" />
               </v-card-text>
               <v-card-actions>
                 <v-spacer></v-spacer>
@@ -249,29 +296,46 @@ const {
             </v-card>
           </v-dialog>
 
-          <!-- View History Modal -->
+          <!-- Violation History -->
           <v-dialog
             v-model="showViewHistory"
-            max-width="600px"
+            max-width="800px"
             elevation="10"
             style="backdrop-filter: blur(8px)"
           >
             <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
-              <v-card-title class="headline"><strong>HISTORY</strong></v-card-title>
+              <v-card-title class="headline">Violation History</v-card-title>
               <v-card-text>
                 <v-data-table
-                  :headers="headers"
+                  :headers="[
+                    { text: 'Student ID', value: 'student_id' },
+                    { text: 'Violation Type', value: 'violation_type' },
+                    { text: 'Recorded By', value: 'guard_name' },
+                    { text: 'Status', value: 'status' }
+                  ]"
                   :items="history"
                   item-value="id"
                   class="mt-5"
                   :footer-props="{ 'items-per-page-options': [] }"
-                  style="background-color: transparent"
                 >
+                  <!-- Student ID Slot with Details -->
+                  <template v-slot:item.student_id="{ item }">
+                    <span v-if="item.student_id">
+                      <v-btn @click="showStudentDetails(item.student_id)" color="green" text>
+                        {{ item.student_id }}
+                      </v-btn>
+                    </span>
+                    <span v-else>No Student Data</span>
+                  </template>
+                  <!-- Guard Name Slot -->
+                  <template v-slot:item.guard_name="{ item }">
+                    <span>{{ item.guardFullName || 'No Data' }}</span>
+                  </template>
                 </v-data-table>
               </v-card-text>
               <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn @click="showViewHistory = false" color="customGreen">Close</v-btn>
+                <v-btn @click="showViewHistory = false">Close</v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -280,3 +344,11 @@ const {
     </AppLayout>
   </v-app>
 </template>
+
+<style scoped>
+.customGreen {
+  background-color: #286643;
+  color: white;
+  border: 2px solid #e6ffb1;
+}
+</style>
