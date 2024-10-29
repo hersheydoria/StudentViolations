@@ -69,7 +69,6 @@ async function onLogin() {
         console.error('Login error:', error.message)
       } else {
         console.log('Access Token:', data.session.access_token)
-
         router.push('/home')
       }
     } catch (error) {
@@ -93,7 +92,7 @@ async function onResetPassword() {
   if (valid.value) {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(emailForReset.value, {
-        redirectTo: 'http://student-violations.vercel.app/reset-password'
+        redirectTo: 'https://student-violations.vercel.app/reset-password' // Adjusted for your actual URL
       })
 
       if (error) {
