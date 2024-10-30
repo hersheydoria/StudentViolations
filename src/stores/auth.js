@@ -1,9 +1,4 @@
-/* global process */
-import { createClient } from '@supabase/supabase-js'
-import 'dotenv/config' // Load environment variables from .env file
-
-// Initialize Supabase client
-const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
+import { supabase } from './supabase'
 
 export const guardsInfo = async () => {
   const guards = [

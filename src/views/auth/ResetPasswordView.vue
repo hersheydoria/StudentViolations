@@ -1,31 +1,44 @@
 <script setup>
-import ResetPasswordForm from '@/components/auth/ResetPasswordForm.vue'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { supabase } from '@/stores/supabase'
 
-// Reactive state for the dialog
-const isDialogOpen = ref(true) // Controls whether the dialog is open or closed
+const password = ref('')
+const message = ref('')
+const route = useRoute()
 
-// Handle successful password reset
-function handleResetSuccess() {
-  isDialogOpen.value = false // Close dialog on successful reset
+onMounted(() => {
+  // Check if the access token is present in the query parameters
+  if (!route.query.access_token) {
+    message.value = 'Invalid or expired token.'
+  }
+})
+
+async function updatePassword() {
+  const { error } = await supabase.auth.api.updateUser({
+    password: password.value,
+    access_token: route.query.access_token // Pass the access token from the link
+  })
+
+  if (error) {
+    message.value = 'Error: ' + error.message
+  } else {
+    message.value = 'Password updated successfully!'
+  }
 }
 </script>
 
 <template>
-  <v-dialog
-    v-model="isDialogOpen"
-    max-width="500"
-    elevation="10"
-    style="backdrop-filter: blur(8px)"
-  >
-    <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
-      <v-card-title class="headline">
-        <strong>Reset Password</strong>
-      </v-card-title>
-      <ResetPasswordForm @reset-success="handleResetSuccess"></ResetPasswordForm>
-      <v-card-actions>
-        <v-btn text @click="isDialogOpen = false">Close</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <div>
+    <h1>Set New Password</h1>
+    <form @submit.prevent="updatePassword">
+      <input type="password" v-model="password" placeholder="New Password" required />
+      <button type="submit">Update Password</button>
+    </form>
+    <p v-if="message">{{ message }}</p>
+  </div>
 </template>
+
+<style>
+/* Add any styles you need */
+</style>

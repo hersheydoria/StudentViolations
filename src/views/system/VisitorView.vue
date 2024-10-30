@@ -80,7 +80,15 @@ const {
               <!-- Top Slot for Title -->
               <template #top>
                 <v-toolbar flat style="background-color: #e6ffb1">
-                  <v-toolbar-title><strong>RECORDS</strong></v-toolbar-title>
+                  <v-toolbar-title
+                    ><strong>
+                      {{
+                        selectedStudent?.fullName
+                          ? `${selectedStudent.fullName}'s RECORD`
+                          : 'RECORD'
+                      }}
+                    </strong></v-toolbar-title
+                  >
                 </v-toolbar>
               </template>
 
@@ -135,7 +143,11 @@ const {
               font-size: 18px;
             "
           >
-            {{ selectedStudent?.name }}'s Record History
+            {{
+              studentID
+                ? `${selectedStudent?.fullName || 'Unknown Student'}'s RECORD HISTORY`
+                : 'HISTORY'
+            }}
           </v-card-title>
           <v-card-text>
             <template v-if="selectedStudent?.records && selectedStudent.records.length > 0">
@@ -149,6 +161,7 @@ const {
                 item-value="id"
                 class="mt-5"
                 :footer-props="{ 'items-per-page-options': [] }"
+                style="background-color: #e6ffb1"
               >
                 <!-- Guard Name Slot -->
                 <template v-slot:item.guard_name="{ item }">
@@ -166,7 +179,7 @@ const {
             <v-btn
               @click="closeModal"
               color="#286643"
-              style="color: white; border: 2px solid #e6ffb1; margin: auto"
+              style="color: black; border: 2px solid #e6ffb1; margin: auto"
             >
               Close
             </v-btn>

@@ -1,9 +1,6 @@
 import { ref, watch, onMounted } from 'vue'
-import { supabase } from './supabase'
+import { supabase, SUPABASE_URL, SUPABASE_KEY } from './supabase'
 import axios from 'axios'
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Composable to handle student records
 export function useStudentRecords() {
@@ -13,13 +10,12 @@ export function useStudentRecords() {
   const historyModalVisible = ref(false) // Control visibility of the history modal
   const selectedStudent = ref(null) // To store the selected student
   const loading = ref(false) // Loading state
-  const showViewHistory = ref(false)
   const history = ref([])
 
   const getStudentByStudentId = async (studentId) => {
     const { data, error } = await supabase
       .from('students') // Ensure this matches your students table name
-      .select('student_number')
+      .select('student_number, first_name, last_name') // Fetch first and last names as well
       .eq('student_number', studentId) // Match studentId to student_number
       .single() // Fetch a single student record
 
@@ -30,7 +26,6 @@ export function useStudentRecords() {
 
     return data
   }
-
   const getUserById = async (id) => {
     const { data, error } = await supabase.rpc('get_user_metadata', { user_id: id })
 
@@ -48,8 +43,6 @@ export function useStudentRecords() {
     noRecordMessage.value = '' // Reset message on new fetch
 
     try {
-      console.log('Fetching violations for student ID:', studentID.value) // Log student ID
-
       // Prepare the URL for fetching violations
       const url = `${SUPABASE_URL}/rest/v1/student_violations?select=id,violation_type,violation_date,status,recorded_by,student_id&student_id=eq.${studentID.value}`
 
@@ -96,10 +89,14 @@ export function useStudentRecords() {
       for (const studentId of studentIds) {
         const student = await getStudentByStudentId(studentId)
         if (student) {
-          studentsMap[studentId] = student.student_number // Store student number in studentsMap
+          // Store full student details in studentsMap
+          studentsMap[studentId] = {
+            first_name: student.first_name,
+            last_name: student.last_name,
+            student_number: student.student_number
+          }
         }
       }
-
       // Map blocked violations with guard names and student numbers
       studentRecords.value = blockedViolations.map((violation) => ({
         id: violation.id,
@@ -125,11 +122,10 @@ export function useStudentRecords() {
         guardFullName: guardsMap[violation.recorded_by]
           ? `${guardsMap[violation.recorded_by].first_name || 'Unknown'} ${guardsMap[violation.recorded_by].last_name || ''}`
           : 'Unknown Guard',
-        student_id: studentsMap[violation.student_id] || 'Unknown'
+        studentFullName: studentsMap[violation.student_id]
+          ? `${studentsMap[violation.student_id].first_name || 'Unknown'} ${studentsMap[violation.student_id].last_name || ''}`
+          : 'Unknown Student'
       }))
-
-      console.log('Fetched Violations:', studentRecords.value)
-      console.log('Fetched History Records:', history.value)
     } catch (error) {
       console.error('Error fetching student violations:', error)
       noRecordMessage.value = 'Error fetching records: ' + (error.message || 'Unknown error')
@@ -138,31 +134,39 @@ export function useStudentRecords() {
     }
   }
 
-  // Function to handle ID input when Enter button is clicked
   async function handleEnterClick() {
     if (!studentID.value) {
       noRecordMessage.value = 'Please enter a student ID'
       return
     }
 
-    // Updated regex to allow numeric student IDs with dashes
     if (!/^\d+(-\d+)*$/.test(studentID.value)) {
       noRecordMessage.value = 'Please enter a valid student ID (numbers and dashes allowed)'
       return
     }
 
+    // Fetch student details and set selectedStudent
+    const student = await getStudentByStudentId(studentID.value)
+    if (student) {
+      selectedStudent.value = {
+        fullName: `${student.first_name} ${student.last_name}`,
+        student_number: student.student_number
+      }
+    } else {
+      selectedStudent.value = {
+        fullName: 'Unknown Student'
+      }
+    }
+
     await fetchViolations() // Fetch violations for the entered student ID
   }
 
-  // Function to open the history modal
   function showHistory() {
     selectedStudent.value = {
-      name: 'Student ID ' + studentID.value, // Use the student ID or another identifier
+      fullName: history.value[0]?.studentFullName || 'Unknown Student',
       records: history.value // Set unblocked violations as the history records
     }
-
-    // Open the modal
-    historyModalVisible.value = true
+    historyModalVisible.value = true // Open the modal
   }
 
   // Function to close the history modal

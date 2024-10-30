@@ -1,13 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { createClient } from '@supabase/supabase-js'
-
-// Initialize Supabase client with correct keys
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
+import { supabase } from '@/stores/supabase'
 
 // Form data and states
 const email = ref('')
@@ -70,9 +64,25 @@ async function onLogin() {
   errorMessage.value = ''
   loading.value = true
 
+  // Check for missing email or password
+  if (!email.value && !password.value) {
+    errorMessage.value = 'Please enter both email and password'
+    loading.value = false
+    return
+  } else if (!email.value) {
+    errorMessage.value = 'Please enter your email'
+    loading.value = false
+    return
+  } else if (!password.value) {
+    errorMessage.value = 'Please enter your password'
+    loading.value = false
+    return
+  }
+
+  // Proceed with login if the form is valid
   if (valid.value) {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.value,
         password: password.value
       })
@@ -81,15 +91,12 @@ async function onLogin() {
         errorMessage.value = 'Invalid login credentials'
         console.error('Login error:', error.message)
       } else {
-        console.log('Access Token:', data.session.access_token)
         router.push('/home')
       }
     } catch (error) {
       errorMessage.value = 'An unexpected error occurred'
       console.error('Unexpected error:', error)
     }
-  } else {
-    console.log('Invalid form')
   }
 
   loading.value = false
@@ -102,10 +109,12 @@ function onForgotPassword() {
 
 // Reset password function
 async function onResetPassword() {
+  errorMessage.value = '' // Clear any previous error messages
+
   if (valid.value) {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(emailForReset.value, {
-        redirectTo: 'https://student-violations.vercel.app/reset-password' // Adjusted for your actual URL
+        redirectTo: 'http://student-violations.vercel.app/reset-password' // Adjust this URL based on your environment
       })
 
       if (error) {

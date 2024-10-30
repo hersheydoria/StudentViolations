@@ -78,21 +78,35 @@ const onRemoveViolation = async (id) => {
               <v-img src="account.jpg" alt="Profile Picture" />
             </v-avatar>
           </v-list-item>
+          <v-divider></v-divider>
+
           <v-list-item v-if="user">
-            <p><strong>ID Number:</strong> {{ user.idNumber }}</p>
+            <p><strong>ID Number: </strong>{{ user.idNumber }}</p>
           </v-list-item>
+          <v-divider></v-divider>
+
           <v-list-item v-if="user">
-            <p><strong>Name:</strong> {{ user.fullname }}</p>
+            <p><strong>Name: </strong>{{ user.fullname }}</p>
           </v-list-item>
+          <v-divider></v-divider>
+
           <v-list-item v-if="user">
-            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Email: </strong></p>
+            <p>{{ user.email }}</p>
           </v-list-item>
+          <v-divider></v-divider>
+
           <v-list-item v-if="user">
-            <p><strong>Role:</strong> {{ user.role }}</p>
+            <p><strong>Role: </strong>{{ user.role }}</p>
           </v-list-item>
+          <v-divider></v-divider>
           <v-list-item v-if="user">
             <v-divider></v-divider>
-            <v-list-item @click="logout">Logout</v-list-item>
+            <v-list-item
+              @click="logout"
+              style="color: black; border: 2px solid green; text-align: center"
+              ><strong>LOGOUT</strong></v-list-item
+            >
           </v-list-item>
           <v-list-item v-else>
             <p>No user currently signed in.</p>
@@ -192,7 +206,7 @@ const onRemoveViolation = async (id) => {
             style="backdrop-filter: blur(8px)"
           >
             <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
-              <v-card-title class="headline">Student Details</v-card-title>
+              <v-card-title class="headline"><strong>STUDENT DETAILS</strong></v-card-title>
               <v-card-text>
                 <v-row>
                   <v-col cols="12" class="text-center">
@@ -281,13 +295,9 @@ const onRemoveViolation = async (id) => {
               <v-card-actions>
                 <v-spacer></v-spacer>
                 <v-btn @click="showForm = false" color="grey">Cancel</v-btn>
-                <v-alert v-if="error" type="error" dense>
-                  {{ error }}
-                </v-alert>
 
-                <v-btn :disabled="!valid || isLoading" @click="addViolation">
-                  <span v-if="isLoading">Adding...</span>
-                  <span v-else>Add</span>
+                <v-btn :disabled="!valid" @click="addViolation">
+                  <span>Add</span>
                 </v-btn>
               </v-card-actions>
             </v-card>
@@ -320,7 +330,7 @@ const onRemoveViolation = async (id) => {
             style="backdrop-filter: blur(8px)"
           >
             <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
-              <v-card-title class="headline">Violation History</v-card-title>
+              <v-card-title class="headline"><strong>VIOLATION HISTORY</strong></v-card-title>
               <v-card-text>
                 <v-data-table
                   :headers="[
@@ -333,6 +343,7 @@ const onRemoveViolation = async (id) => {
                   item-value="id"
                   class="mt-5"
                   :footer-props="{ 'items-per-page-options': [] }"
+                  style="background-color: #e6ffb1"
                 >
                   <!-- Student ID Slot with Details -->
                   <template v-slot:item.student_id="{ item }">

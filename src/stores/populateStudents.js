@@ -1,14 +1,6 @@
-/* global process */
 import axios from 'axios'
-import { createClient } from '@supabase/supabase-js'
 import { v4 as uuidv4 } from 'uuid'
-import dotenv from 'dotenv'
-
-// Load environment variables from .env file
-dotenv.config()
-
-// Initialize Supabase client
-const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
+import { supabase } from './supabase'
 
 const apiURL = 'https://fakerapi.it/api/v2/persons?_quantity=10'
 
@@ -95,14 +87,12 @@ async function populateStudents() {
     })
 
     // Upsert the students data into the database
-    const { data: upsertedData, error } = await supabase
+    const { data: error } = await supabase
       .from('students')
       .upsert(studentsData, { onConflict: ['student_number'] })
 
     if (error) {
       console.error('Error upserting data:', error)
-    } else {
-      console.log('Successfully upserted data:', upsertedData)
     }
   } catch (error) {
     console.error('Error fetching data from FakerAPI:', error)

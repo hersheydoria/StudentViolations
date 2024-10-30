@@ -1,14 +1,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { createClient } from '@supabase/supabase-js'
 import { v4 as uuidv4 } from 'uuid'
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-// Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+import { supabase, SUPABASE_URL, SUPABASE_KEY } from './supabase'
 
 export function useViolationRecords() {
   const router = useRouter()
@@ -36,8 +30,6 @@ export function useViolationRecords() {
     { text: 'Status', value: 'status' },
     { text: 'Action', value: 'action', sortable: false }
   ]
-  console.log('Headers: ', headers)
-  console.log('Violations: ', violations)
 
   const violationTypes = [
     'Abuse Code Ceremony',
@@ -133,9 +125,6 @@ export function useViolationRecords() {
           : 'Unknown Guard',
         student_id: studentsMap[violation.student_id] || 'Unknown'
       }))
-
-      console.log('Blocked violations:', violations.value)
-      console.log('Unblocked violations (history):', history.value)
     } catch (error) {
       console.error('Error fetching student violations:', error)
     } finally {
@@ -200,15 +189,11 @@ export function useViolationRecords() {
   const normalizeId = (id) => id?.replace(/-/g, '').trim() || ''
 
   const showStudentDetails = (studentId) => {
-    console.log('Student ID passed to showStudentDetails:', studentId)
-
     // Normalize the incoming studentId
     const normalizedId = normalizeId(studentId)
-    console.log('Normalized Student ID:', normalizedId)
 
     // Debug: log the normalized student IDs in students.value
     const studentIds = students.value.map((s) => normalizeId(s.student_number))
-    console.log('Available Student IDs:', studentIds)
 
     // Find student by normalized student number
     const student = students.value.find((s) => normalizeId(s.student_number) === normalizedId)
@@ -381,7 +366,6 @@ export function useViolationRecords() {
       // Move the unblocked violation from `violations` to `history` in local state
       history.value.push(unblockedViolation)
       violations.value.splice(index, 1)
-      console.log(`Violation with ID ${violationId} has been unblocked.`)
     } catch (err) {
       console.error('Unexpected error while unblocking violation:', err.message)
       alert('An unexpected error occurred while unblocking the violation.')
@@ -426,7 +410,6 @@ export function useViolationRecords() {
 
   const onQrCodeScanned = (result) => {
     if (result) {
-      console.log('QR Code Scanned Result:', result)
       newViolation.value.studentId = result
       showQrScanner.value = false
     }
