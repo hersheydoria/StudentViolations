@@ -1,52 +1,53 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { supabase } from '@/stores/supabase'
+import AppLayout from '@/components/layout/AppLayout.vue'
+import ResetPasswordForm from '@/components/auth/ResetPasswordForm.vue' // Import the form component
 
-const password = ref('')
-const message = ref('')
 const route = useRoute()
-const accessToken = ref('') // Declare accessToken as a ref
+const accessToken = ref('')
 
 onMounted(() => {
   // Check if the access token is present in the query parameters
   if (!route.query.access_token) {
-    message.value = 'Invalid or expired token.'
+    accessToken.value = null // Invalid token
   } else {
     // Get the access token from the URL query parameters
     accessToken.value = route.query.access_token
   }
 })
-
-async function updatePassword() {
-  // Only proceed if the access token is available
-  if (!accessToken.value) {
-    message.value = 'Invalid or expired token.'
-    return
-  }
-
-  const { error } = await supabase.auth.api.updateUser({
-    password: password.value,
-    access_token: accessToken.value // Use the reactive access token
-  })
-
-  if (error) {
-    message.value = 'Error: ' + error.message
-  } else {
-    message.value = 'Password updated successfully!'
-  }
-}
 </script>
 
 <template>
-  <div>
-    <h1>Set New Password</h1>
-    <form @submit.prevent="updatePassword">
-      <input type="password" v-model="password" placeholder="New Password" required />
-      <button type="submit">Update Password</button>
-    </form>
-    <p v-if="message">{{ message }}</p>
-  </div>
+  <v-app>
+    <!-- Use AppLayout as a wrapper and pass the login form via the default slot -->
+    <AppLayout>
+      <v-row class="d-flex justify-center align-center">
+        <v-col cols="12" md="6">
+          <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
+            <!-- Add image above the heading -->
+            <v-img
+              src="/logo6.png"
+              alt="System Logo"
+              contain
+              max-width="120"
+              class="mx-auto mb-4"
+            ></v-img>
+
+            <!-- Card title for "Login" -->
+            <v-card-title class="text-center">
+              <h3 class="font-weight-bold" style="color: #286643">Reset Password</h3>
+            </v-card-title>
+
+            <!-- Card content -->
+            <v-card-text>
+              <ResetPasswordForm></ResetPasswordForm>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </AppLayout>
+  </v-app>
 </template>
 
 <style>

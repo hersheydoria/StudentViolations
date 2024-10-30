@@ -1,39 +1,98 @@
-<template>
-  <div>
-    <h1>Set New Password</h1>
-    <form @submit.prevent="updatePassword">
-      <input type="password" v-model="password" placeholder="New Password" required />
-      <button type="submit">Update Password</button>
-    </form>
-    <p v-if="message">{{ message }}</p>
-  </div>
-</template>
-
 <script setup>
 import { ref } from 'vue'
-import { supabase } from '../supabase' // Adjust the path as necessary
-import { useRoute } from 'vue-router'
+import { supabase } from '@/stores/supabase' // Import your supabase instance
 
-const password = ref('')
-const message = ref('')
-const route = useRoute()
+const newPassword = ref('')
+const confirmPassword = ref('')
+const valid = ref(true)
+const loading = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
 
+// Validation rules
+const rules = {
+  required: (value) => !!value || 'Required.',
+  passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long'
+}
+
+// Custom validation rule for matching passwords
+const confirmPasswordMatch = (v) => v === newPassword.value || 'Passwords do not match'
+
+// Method to update the password
 async function updatePassword() {
-  const { error } = await supabase.auth.api.updateUser({
-    password: password.value,
-    access_token: route.query.access_token // Pass the access token from the link
-  })
+  loading.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
 
-  if (error) {
-    message.value = 'Error: ' + error.message
-  } else {
-    message.value = 'Password updated successfully!'
-    // Emit an event to inform the parent component about success
-    emit('reset-success')
+  // Check if passwords match
+  if (newPassword.value !== confirmPassword.value) {
+    errorMessage.value = 'Passwords do not match.'
+    loading.value = false
+    return
+  }
+
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword.value
+    })
+
+    if (error) {
+      throw error
+    }
+
+    successMessage.value = 'Password updated successfully!'
+    newPassword.value = ''
+    confirmPassword.value = ''
+  } catch (error) {
+    errorMessage.value = 'Error: ' + error.message
+  } finally {
+    loading.value = false
   }
 }
 </script>
+<template>
+  <v-form v-model="valid" lazy-validation>
+    <!-- New Password field -->
+    <v-text-field
+      v-model="newPassword"
+      :rules="[rules.required, rules.passwordMin]"
+      label="New Password"
+      prepend-icon="mdi-lock"
+      type="password"
+      required
+    ></v-text-field>
 
-<style>
-/* Add any styles you need */
-</style>
+    <!-- Confirm Password field -->
+    <v-text-field
+      v-model="confirmPassword"
+      :rules="[rules.required, confirmPasswordMatch]"
+      label="Confirm Password"
+      prepend-icon="mdi-lock"
+      type="password"
+      required
+    ></v-text-field>
+
+    <!-- Display error message if there's an error -->
+    <v-alert v-if="errorMessage" type="error" class="mt-4">
+      {{ errorMessage }}
+    </v-alert>
+
+    <!-- Display success message if password is updated successfully -->
+    <v-alert v-if="successMessage" type="success" class="mt-4">
+      {{ successMessage }}
+    </v-alert>
+
+    <v-row>
+      <v-col class="text-right">
+        <v-btn
+          :loading="loading"
+          color="customGreen"
+          @click="updatePassword"
+          style="width: 100%; height: 40px; font-size: 18px"
+        >
+          Update Password
+        </v-btn>
+      </v-col>
+    </v-row>
+  </v-form>
+</template>
