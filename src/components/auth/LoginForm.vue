@@ -46,8 +46,9 @@ onMounted(async () => {
   })
 
   // Add keydown event listener for Enter key
-  document.addEventListener('keydown', (event) => {
+  const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
+      event.preventDefault() // Prevent default behavior on Enter key
       if (forgotPasswordDialog.value) {
         // If the forgot password dialog is open, handle reset password
         onResetPassword()
@@ -56,7 +57,14 @@ onMounted(async () => {
         onLogin()
       }
     }
-  })
+  }
+
+  document.addEventListener('keydown', handleKeyDown)
+
+  // Clean up event listener on component unmount
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown)
+  }
 })
 
 // Login function
