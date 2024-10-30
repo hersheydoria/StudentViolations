@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router' // Import useRouter for navigation
 import { supabase } from '@/stores/supabase' // Import your supabase instance
 
 const newPassword = ref('')
@@ -8,6 +9,7 @@ const valid = ref(true)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const router = useRouter() // Initialize the router
 
 // Validation rules
 const rules = {
@@ -43,6 +45,11 @@ async function updatePassword() {
     successMessage.value = 'Password updated successfully!'
     newPassword.value = ''
     confirmPassword.value = ''
+
+    // Redirect to the login page after successful password update
+    setTimeout(() => {
+      router.push('/login') // Use the path of your login route
+    }, 1000) // Optional: Delay for 1 second before redirecting
   } catch (error) {
     errorMessage.value = 'Error: ' + error.message
   } finally {
@@ -50,8 +57,10 @@ async function updatePassword() {
   }
 }
 </script>
+
 <template>
-  <v-form v-model="valid" lazy-validation>
+  <v-form v-model="valid" lazy-validation @keyup.enter="updatePassword">
+    <!-- Trigger on Enter key -->
     <!-- New Password field -->
     <v-text-field
       v-model="newPassword"
