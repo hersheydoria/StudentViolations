@@ -273,7 +273,7 @@ export function useViolationRecords() {
       id: uuidv4(),
       student_id: studentInfo,
       violation_type: newViolation.value.type,
-      violation_date: new Date().toISOString(),
+      violation_date: new Date().toLocaleString(), // Get local date and time string
       recorded_by: guardId, // UUID from auth.users
       status: 'Blocked'
     }

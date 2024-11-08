@@ -189,7 +189,10 @@ const onRemoveViolation = async (id) => {
 
                 <!-- Slot for Action Button -->
                 <template v-slot:item.action="{ item }">
-                  <v-btn @click="unblockViolation(item.id)" color="green" style="margin-right: 10px"
+                  <v-btn
+                    @click="unblockViolation(item.id)"
+                    color="green"
+                    style="margin-right: 10px; margin-bottom: 10px; margin-top: 10px"
                     >UNBLOCK</v-btn
                   >
                   <v-btn @click="onRemoveViolation(item.id)" color="red">REMOVE</v-btn>
@@ -278,7 +281,7 @@ const onRemoveViolation = async (id) => {
                     Open QR Code Scanner
                   </v-btn>
 
-                  <div v-if="newViolation.studentId" class="mt-2">
+                  <div v-if="selectedMethod === 'qrCode' && newViolation.studentId" class="mt-2">
                     <p>
                       Scanned Student ID: <strong>{{ newViolation.studentId }}</strong>
                     </p>
