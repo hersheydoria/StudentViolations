@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { usePiniaStore } from '@/stores/piniaStore' // Import the store
 import { supabase } from '@/stores/supabase'
+import { authState } from '@/main.js'
 import LoginView from '@/views/auth/LoginView.vue'
 import VisitorView from '@/views/system/VisitorView.vue'
 import HomeView from '@/views/system/HomeView.vue'
