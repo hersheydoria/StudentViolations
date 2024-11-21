@@ -28,9 +28,9 @@ function parseHash(hash) {
 
 onMounted(() => {
   // Attempt to retrieve the access_token from query
-  let tokenFromUrl = route.query.access_token
+  let tokenFromUrl = route.query.access_token || localStorage.getItem('accessToken')
 
-  // If not in query, check the hash fragment for access_token
+  // If not in query or localStorage, check the hash fragment for access_token
   if (!tokenFromUrl && window.location.hash) {
     const hashParams = parseHash(window.location.hash.substring(1)) // Remove leading "#"
     tokenFromUrl = hashParams.access_token
