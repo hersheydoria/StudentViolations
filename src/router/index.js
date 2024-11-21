@@ -77,18 +77,7 @@ const router = createRouter({
 
 // Global guard for authenticated routes
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('accessToken')
-  console.log('Global auth check - token:', token) // Debugging the token here
-
-  // Skip auth check for routes without auth requirement
-  if (!to.meta.requiresAuth) {
-    next()
-    return
-  }
-
-  // General session-based auth check
-  if (!token) {
-    console.warn('User is not authenticated. Redirecting to login.')
+  if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect to login if not authenticated
   } else {
     next() // Allow access
