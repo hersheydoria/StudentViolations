@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { usePiniaStore } from '@/stores/piniaStore' // Import the store
+import { useRouter } from 'vue-router'
 import { supabase } from '@/stores/supabase'
 
 // State variables
@@ -10,79 +11,46 @@ const valid = ref(true)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const token = ref(null)
 
-const route = useRoute()
+const piniaStore = usePiniaStore() // Access the store
+const token = piniaStore.token // Retrieve the token from the store
 const router = useRouter()
 
-// Function to parse the hash and extract query parameters
-function parseHash(hash) {
-  const hashParams = {}
-  const regex = /([^&=]+)=([^&]*)/g
-  let match
-  while ((match = regex.exec(hash))) {
-    hashParams[decodeURIComponent(match[1])] = decodeURIComponent(match[2])
-  }
-  return hashParams
-}
-
 onMounted(() => {
-  // First check for token in query parameters
-  let tokenFromUrl = route.query.access_token
-
-  // If no token in query, check the hash fragment for token
-  if (!tokenFromUrl && window.location.hash) {
-    const hashParams = parseHash(window.location.hash.substring(1)) // Remove leading "#"
-    tokenFromUrl = hashParams.access_token
-  }
-
-  console.log('Access Token from URL or hash:', tokenFromUrl) // Debugging line
-  console.log('Access Token from route query:', route.query.access_token)
-  console.log('Access Token from window hash:', window.location.hash)
-
-  if (!tokenFromUrl) {
+  if (!token) {
     errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
-    redirectToLogin()
+    setTimeout(() => router.push('/login'), 2000)
     return
   }
 
-  token.value = tokenFromUrl
-
-  verifyToken(token.value)
+  verifyToken(token)
 })
 
 async function verifyToken(token) {
   try {
     const { error } = await supabase.auth.verifyOtp({
       type: 'recovery',
-      token: token
+      token
     })
 
     if (error) {
       errorMessage.value = 'Invalid or expired token. Please request a new reset link.'
-      redirectToLogin()
+      setTimeout(() => router.push('/login'), 2000)
     }
   } catch (err) {
     console.error('Unexpected error:', err.message)
     errorMessage.value = 'An unexpected error occurred. Please try again.'
-    redirectToLogin()
+    setTimeout(() => router.push('/login'), 2000)
   }
 }
 
-function redirectToLogin() {
-  setTimeout(() => {
-    router.push('/login')
-  }, 2000)
-}
-
-// Method to update the password
 async function updatePassword() {
   loading.value = true
   errorMessage.value = ''
   successMessage.value = ''
 
   // Check if token is valid
-  if (!token.value) {
+  if (!token) {
     errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
     loading.value = false
     return
@@ -110,9 +78,7 @@ async function updatePassword() {
     confirmPassword.value = ''
 
     // Redirect to login page after a short delay
-    setTimeout(() => {
-      router.push('/login') // Use the path of your login route
-    }, 2000) // Delay for user feedback
+    setTimeout(() => router.push('/login'), 2000) // Delay for user feedback
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
   } finally {
