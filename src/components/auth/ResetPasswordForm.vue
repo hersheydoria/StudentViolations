@@ -1,46 +1,49 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router' // Import useRouter and useRoute for navigation and token extraction
-import { supabase } from '@/stores/supabase' // Import your supabase instance
+import { useRouter, useRoute } from 'vue-router'
+import { supabase } from '@/stores/supabase'
 
-// Form state and validation
+// State variables
 const newPassword = ref('')
 const confirmPassword = ref('')
 const valid = ref(true)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const token = ref(null)
 
-// Token and router instance
 const route = useRoute()
 const router = useRouter()
-const token = ref(null) // Token from query parameter
 
-// Validation rules
-const rules = {
-  required: (value) => !!value || 'Required.',
-  passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long',
-  confirmPasswordMatch: (v) => v === newPassword.value || 'Passwords do not match'
+function parseHash(hash) {
+  const hashParams = {}
+  const regex = /([^&=]+)=([^&]*)/g
+  let match
+  while ((match = regex.exec(hash))) {
+    hashParams[decodeURIComponent(match[1])] = decodeURIComponent(match[2])
+  }
+  return hashParams
 }
 
-// Lifecycle to verify token on mount
 onMounted(async () => {
-  // Extract token from the URL
-  const tokenFromUrl = route.query.access_token
-  console.log('Access Token in ResetPasswordView:', route.query.access_token)
+  // Check if access_token exists in query or hash
+  let tokenFromUrl = route.query.access_token
 
-  console.log('Access Token:', tokenFromUrl) // Debugging line to confirm extraction
+  if (!tokenFromUrl && window.location.hash) {
+    const hashParams = parseHash(window.location.hash.substring(1)) // Remove leading "#"
+    tokenFromUrl = hashParams.access_token
+  }
 
-  // Check if the token exists
+  console.log('Access Token:', tokenFromUrl) // Debugging line
+
   if (!tokenFromUrl) {
     errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
-    redirectToLogin() // Redirect to login if no token
+    redirectToLogin()
     return
   }
 
   token.value = tokenFromUrl
 
-  // Attempt to verify the token
   try {
     const { error } = await supabase.auth.verifyOtp({
       type: 'recovery',
@@ -52,17 +55,16 @@ onMounted(async () => {
       redirectToLogin()
     }
   } catch (err) {
-    console.error('Unexpected error during token verification:', err.message)
+    console.error('Unexpected error:', err.message)
     errorMessage.value = 'An unexpected error occurred. Please try again.'
     redirectToLogin()
   }
 })
 
-// Redirect to login page after showing an error
 function redirectToLogin() {
   setTimeout(() => {
-    router.push('/login') // Use the path of your login route
-  }, 3000) // Optional delay to display error message
+    router.push('/login')
+  }, 2000)
 }
 
 // Method to update the password
