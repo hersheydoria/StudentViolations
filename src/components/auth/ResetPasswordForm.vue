@@ -25,31 +25,30 @@ const rules = {
 
 // Lifecycle to verify token on mount
 onMounted(async () => {
-  token.value = route.query.access_token // Extract token from URL
+  const tokenFromUrl = route.query.access_token
+  console.log('Access Token:', tokenFromUrl) // Debugging line
 
-  if (!token.value) {
+  if (!tokenFromUrl) {
     errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
     redirectToLogin()
     return
   }
 
+  token.value = tokenFromUrl
+
   try {
-    // Verify the token validity
     const { error } = await supabase.auth.verifyOtp({
       type: 'recovery',
       token: token.value
     })
 
     if (error) {
-      console.error('Token verification error:', error.message)
       errorMessage.value = 'Invalid or expired token. Please request a new reset link.'
-      token.value = null
       redirectToLogin()
     }
   } catch (err) {
     console.error('Unexpected error:', err.message)
-    errorMessage.value = 'An error occurred. Please try again.'
-    token.value = null
+    errorMessage.value = 'An unexpected error occurred. Please try again.'
     redirectToLogin()
   }
 })
