@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { usePiniaStore } from '@/stores/piniaStore' // Import the store
+import { supabase } from '@/stores/supabase'
 import LoginView from '@/views/auth/LoginView.vue'
 import VisitorView from '@/views/system/VisitorView.vue'
 import HomeView from '@/views/system/HomeView.vue'
@@ -20,24 +21,39 @@ const router = createRouter({
       name: 'ResetPassword',
       component: ResetPasswordView,
       meta: { requiresAuth: false },
-      beforeEnter: (to, from, next) => {
+      beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
-        let token = to.query.access_token
+        let token = to.query.access_token || localStorage.getItem('auth_token')
 
+        // If no token in URL or localStorage, try retrieving from hash
         if (!token && window.location.hash) {
           const hashParams = new URLSearchParams(window.location.hash.slice(1))
           token = hashParams.get('access_token')
         }
 
         if (token) {
-          piniaStore.setToken(token)
-          const tokenExpiry = JSON.parse(atob(token.split('.')[1])).exp * 1000
+          piniaStore.setToken(token) // Store token in Pinia store
+          localStorage.setItem('auth_token', token) // Persist token in localStorage
 
+          // Check if token is expired
+          const tokenExpiry = JSON.parse(atob(token.split('.')[1])).exp * 1000
           if (Date.now() > tokenExpiry) {
-            console.warn('Token expired. Redirecting to login.')
-            router.push('/login') // Redirect if token expired
+            console.warn('Token expired. Attempting to refresh...')
+
+            // Token expired, attempt to refresh
+            supabase.auth
+              .refreshSession() // Use Supabase to refresh session
+              .then((newSession) => {
+                piniaStore.setToken(newSession.access_token) // Update token
+                console.log('Token refreshed successfully')
+                next() // Continue if refreshed
+              })
+              .catch((error) => {
+                console.error('Token refresh failed', error)
+                router.push('/login') // Redirect to login if refresh fails
+              })
           } else {
-            next() // Proceed if the token is valid
+            next() // Token is still valid, continue navigation
           }
         } else {
           console.warn('Missing access token. Redirecting to login.')
