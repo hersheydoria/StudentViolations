@@ -22,7 +22,7 @@ const router = createRouter({
       meta: { requiresAuth: false },
       beforeEnter: (to, from, next) => {
         const piniaStore = usePiniaStore()
-        let token = to.query.access_token // Retrieve token from URL query
+        let token = to.query.access_token
 
         if (!token && window.location.hash) {
           const hashParams = new URLSearchParams(window.location.hash.slice(1))
@@ -30,12 +30,18 @@ const router = createRouter({
         }
 
         if (token) {
-          piniaStore.setToken(token) // Store token in Pinia
-          console.log('Token retrieved:', token) // Debugging
-          next()
+          piniaStore.setToken(token)
+          const tokenExpiry = JSON.parse(atob(token.split('.')[1])).exp * 1000
+
+          if (Date.now() > tokenExpiry) {
+            console.warn('Token expired. Redirecting to login.')
+            router.push('/login') // Redirect if token expired
+          } else {
+            next() // Proceed if the token is valid
+          }
         } else {
           console.warn('Missing access token. Redirecting to login.')
-          next('/login')
+          router.push('/login') // Redirect to login if no token
         }
       }
     },
