@@ -27,6 +27,8 @@ const rules = {
 onMounted(async () => {
   // Extract token from the URL
   const tokenFromUrl = route.query.access_token
+  console.log('Access Token in ResetPasswordView:', route.query.access_token)
+
   console.log('Access Token:', tokenFromUrl) // Debugging line to confirm extraction
 
   // Check if the token exists

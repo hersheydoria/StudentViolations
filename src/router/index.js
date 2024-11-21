@@ -27,10 +27,10 @@ const router = createRouter({
       component: ResetPasswordView,
       meta: { requiresAuth: false }, // Exclude this route from auth checks
       beforeEnter: (to, from, next) => {
-        const token = to.query.access_token
-        console.log('Access token:', token) // Debugging: Check if token is being passed
+        console.log('Route object:', to) // Log the route object for debugging
+        console.log('Access token:', to.query.access_token) // Check if the token is extracted
 
-        if (!token) {
+        if (!to.query.access_token) {
           console.warn('Missing access token. Redirecting to login.')
           next('/login') // Redirect if no token is provided
         } else {
