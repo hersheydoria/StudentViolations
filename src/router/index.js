@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { authState } from '@/main.js'
-
+import { usePiniaStore } from '@/stores/piniaStore' // Import the store
 import LoginView from '@/views/auth/LoginView.vue'
 import VisitorView from '@/views/system/VisitorView.vue'
 import HomeView from '@/views/system/HomeView.vue'
@@ -22,19 +21,22 @@ const router = createRouter({
       component: ResetPasswordView,
       meta: { requiresAuth: false },
       beforeEnter: (to, from, next) => {
-        // Extract token from the query params (as passed in the reset link)
-        const token = to.query.access_token
+        const piniaStore = usePiniaStore()
+        let token = to.query.access_token // Retrieve token from URL query
 
-        console.log('Retrieved token:', token) // Debugging line
-
-        if (!token) {
-          console.warn('Missing access token. Redirecting to login.')
-          next('/login')
-          return
+        if (!token && window.location.hash) {
+          const hashParams = new URLSearchParams(window.location.hash.slice(1))
+          token = hashParams.get('access_token')
         }
 
-        // Proceed if the token is present
-        next()
+        if (token) {
+          piniaStore.setToken(token) // Store token in Pinia
+          console.log('Token retrieved:', token) // Debugging
+          next()
+        } else {
+          console.warn('Missing access token. Redirecting to login.')
+          next('/login')
+        }
       }
     },
     {
