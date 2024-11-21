@@ -15,6 +15,7 @@ const token = ref(null)
 const route = useRoute()
 const router = useRouter()
 
+// Function to parse the hash and extract query parameters
 function parseHash(hash) {
   const hashParams = {}
   const regex = /([^&=]+)=([^&]*)/g
@@ -29,6 +30,7 @@ onMounted(async () => {
   // Check if access_token exists in query or hash
   let tokenFromUrl = route.query.access_token
 
+  // If not found in query, check in hash fragment
   if (!tokenFromUrl && window.location.hash) {
     const hashParams = parseHash(window.location.hash.substring(1)) // Remove leading "#"
     tokenFromUrl = hashParams.access_token
