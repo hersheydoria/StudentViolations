@@ -26,11 +26,11 @@ function parseHash(hash) {
   return hashParams
 }
 
-onMounted(async () => {
-  // Check if access_token exists in query or hash
+onMounted(() => {
+  // Attempt to retrieve the access_token from query
   let tokenFromUrl = route.query.access_token
 
-  // If not found in query, check in hash fragment
+  // If not in query, check the hash fragment for access_token
   if (!tokenFromUrl && window.location.hash) {
     const hashParams = parseHash(window.location.hash.substring(1)) // Remove leading "#"
     tokenFromUrl = hashParams.access_token
@@ -46,10 +46,14 @@ onMounted(async () => {
 
   token.value = tokenFromUrl
 
+  verifyToken(token.value)
+})
+
+async function verifyToken(token) {
   try {
     const { error } = await supabase.auth.verifyOtp({
       type: 'recovery',
-      token: token.value
+      token: token
     })
 
     if (error) {
@@ -61,7 +65,7 @@ onMounted(async () => {
     errorMessage.value = 'An unexpected error occurred. Please try again.'
     redirectToLogin()
   }
-})
+}
 
 function redirectToLogin() {
   setTimeout(() => {
