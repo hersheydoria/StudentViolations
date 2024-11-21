@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+// Import the shared authState
+import { authState } from '@/main.js'
 
 // Importing the views
 import LoginView from '@/views/auth/LoginView.vue'
@@ -11,29 +13,47 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/login' // Default route redirects to login
+      redirect: '/login'
     },
     {
-      path: '/login', // Login route
+      path: '/login',
       name: 'login',
-      component: LoginView
+      component: LoginView,
+      meta: { requiresAuth: false }
     },
     {
       path: '/reset-password',
       name: 'ResetPassword',
-      component: ResetPasswordView
+      component: ResetPasswordView,
+      beforeEnter: (to, from, next) => {
+        if (!to.query.access_token) {
+          next('/login') // Redirect if no token is provided
+        } else {
+          next()
+        }
+      }
     },
     {
-      path: '/visitor', // Visitor view route
+      path: '/visitor',
       name: 'visitor',
       component: VisitorView
     },
     {
-      path: '/home', // Home view (Dashboard) route after login
+      path: '/home',
       name: 'home',
-      component: HomeView
+      component: HomeView,
+      meta: { requiresAuth: true }
     }
   ]
+})
+
+// Use the reactive `authState` in the router guard
+router.beforeEach((to, from, next) => {
+  if (to.meta.requiresAuth && !authState.isAuthenticated) {
+    next('/login') // Redirect to login if not authenticated
+  } else {
+    next() // Allow access
+  }
 })
 
 export default router

@@ -35,16 +35,6 @@ onMounted(async () => {
     router.push('/home')
   }
 
-  // Listen for auth state changes
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session?.user) {
-      localStorage.setItem('authUser', JSON.stringify(session.user))
-      router.push('/home')
-    } else if (event === 'SIGNED_OUT') {
-      localStorage.removeItem('authUser')
-    }
-  })
-
   // Add keydown event listener for Enter key
   const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
@@ -67,7 +57,11 @@ onMounted(async () => {
   }
 })
 
-// Login function
+// Import authState from injected context
+import { inject } from 'vue'
+
+const authState = inject('authState') // Access the globally provided authState
+
 async function onLogin() {
   errorMessage.value = ''
   loading.value = true
@@ -90,7 +84,7 @@ async function onLogin() {
   // Proceed with login if the form is valid
   if (valid.value) {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.value,
         password: password.value
       })
@@ -98,7 +92,18 @@ async function onLogin() {
       if (error) {
         errorMessage.value = 'Invalid login credentials'
         console.error('Login error:', error.message)
-      } else {
+      } else if (data?.user) {
+        // Set authState immediately after successful login
+        authState.isAuthenticated = true
+        authState.user = {
+          id: data.user.id,
+          email: data.user.email,
+          fullname: `${data.user.user_metadata?.first_name || ''} ${
+            data.user.user_metadata?.last_name || ''
+          }`.trim()
+        }
+
+        // Redirect to home immediately after login
         router.push('/home')
       }
     } catch (error) {
