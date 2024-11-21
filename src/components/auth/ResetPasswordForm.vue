@@ -19,36 +19,47 @@ const token = ref(null) // Token from query parameter
 // Validation rules
 const rules = {
   required: (value) => !!value || 'Required.',
-  passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long'
+  passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long',
+  confirmPasswordMatch: (v) => v === newPassword.value || 'Passwords do not match'
 }
-
-// Custom validation rule for matching passwords
-const confirmPasswordMatch = (v) => v === newPassword.value || 'Passwords do not match'
 
 // Lifecycle to verify token on mount
 onMounted(async () => {
   token.value = route.query.access_token // Extract token from URL
+
   if (!token.value) {
-    errorMessage.value = 'Invalid or missing token.'
+    errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
+    redirectToLogin()
     return
   }
 
   try {
-    const { error } = await supabase.auth.verifyOTP({
+    // Verify the token validity
+    const { error } = await supabase.auth.verifyOtp({
       type: 'recovery',
       token: token.value
     })
 
     if (error) {
+      console.error('Token verification error:', error.message)
       errorMessage.value = 'Invalid or expired token. Please request a new reset link.'
-      token.value = null // Mark token as invalid
+      token.value = null
+      redirectToLogin()
     }
   } catch (err) {
-    console.error('Error verifying token:', err.message)
-    errorMessage.value = 'An unexpected error occurred. Please try again.'
+    console.error('Unexpected error:', err.message)
+    errorMessage.value = 'An error occurred. Please try again.'
     token.value = null
+    redirectToLogin()
   }
 })
+
+// Redirect to login page after showing an error
+function redirectToLogin() {
+  setTimeout(() => {
+    router.push('/login') // Use the path of your login route
+  }, 3000) // Optional delay to display error message
+}
 
 // Method to update the password
 async function updatePassword() {
@@ -71,6 +82,7 @@ async function updatePassword() {
   }
 
   try {
+    // Update the user's password
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value
     })
@@ -86,9 +98,9 @@ async function updatePassword() {
     // Redirect to login page after a short delay
     setTimeout(() => {
       router.push('/login') // Use the path of your login route
-    }, 1000) // Delay for user feedback
+    }, 2000) // Delay for user feedback
   } catch (error) {
-    errorMessage.value = 'Error: ' + error.message
+    errorMessage.value = 'An error occurred: ' + error.message
   } finally {
     loading.value = false
   }
@@ -96,53 +108,60 @@ async function updatePassword() {
 </script>
 
 <template>
-  <v-form v-model="valid" lazy-validation @keyup.enter="updatePassword">
-    <!-- Trigger on Enter key -->
-    <!-- New Password field -->
-    <v-text-field
-      v-model="newPassword"
-      :rules="[rules.required, rules.passwordMin]"
-      label="New Password"
-      prepend-icon="mdi-lock"
-      type="password"
-      required
-      :disabled="!token || loading"
-    ></v-text-field>
+  <v-container>
+    <v-row justify="center">
+      <v-col cols="12" md="6">
+        <v-card>
+          <v-card-title>Reset Password</v-card-title>
+          <v-card-text>
+            <!-- Display error message if there's an error -->
+            <v-alert v-if="errorMessage" type="error" class="mb-4">
+              {{ errorMessage }}
+            </v-alert>
 
-    <!-- Confirm Password field -->
-    <v-text-field
-      v-model="confirmPassword"
-      :rules="[rules.required, confirmPasswordMatch]"
-      label="Confirm Password"
-      prepend-icon="mdi-lock"
-      type="password"
-      required
-      :disabled="!token || loading"
-    ></v-text-field>
+            <!-- Display success message if password is updated successfully -->
+            <v-alert v-if="successMessage" type="success" class="mb-4">
+              {{ successMessage }}
+            </v-alert>
 
-    <!-- Display error message if there's an error -->
-    <v-alert v-if="errorMessage" type="error" class="mt-4">
-      {{ errorMessage }}
-    </v-alert>
+            <!-- Password reset form -->
+            <v-form v-model="valid" lazy-validation>
+              <!-- New Password field -->
+              <v-text-field
+                v-model="newPassword"
+                :rules="[rules.required, rules.passwordMin]"
+                label="New Password"
+                prepend-icon="mdi-lock"
+                type="password"
+                required
+                :disabled="!token || loading"
+              ></v-text-field>
 
-    <!-- Display success message if password is updated successfully -->
-    <v-alert v-if="successMessage" type="success" class="mt-4">
-      {{ successMessage }}
-    </v-alert>
+              <!-- Confirm Password field -->
+              <v-text-field
+                v-model="confirmPassword"
+                :rules="[rules.required, rules.confirmPasswordMatch]"
+                label="Confirm Password"
+                prepend-icon="mdi-lock"
+                type="password"
+                required
+                :disabled="!token || loading"
+              ></v-text-field>
 
-    <!-- Submit button -->
-    <v-row>
-      <v-col class="text-right">
-        <v-btn
-          :loading="loading"
-          color="customGreen"
-          @click="updatePassword"
-          style="width: 100%; height: 40px; font-size: 18px"
-          :disabled="!token || loading"
-        >
-          Update Password
-        </v-btn>
+              <!-- Submit button -->
+              <v-btn
+                :loading="loading"
+                color="customGreen"
+                @click="updatePassword"
+                block
+                :disabled="!token || loading"
+              >
+                Update Password
+              </v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
       </v-col>
     </v-row>
-  </v-form>
+  </v-container>
 </template>

@@ -27,6 +27,7 @@ const router = createRouter({
       component: ResetPasswordView,
       meta: { requiresAuth: false }, // Ensure this route is excluded from auth checks
       beforeEnter: (to, from, next) => {
+        console.log('Access token:', to.query.access_token)
         if (!to.query.access_token) {
           next('/login') // Redirect if no token is provided
         } else {
