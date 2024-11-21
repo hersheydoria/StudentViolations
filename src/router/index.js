@@ -22,26 +22,18 @@ const router = createRouter({
       component: ResetPasswordView,
       meta: { requiresAuth: false },
       beforeEnter: (to, from, next) => {
-        // Extract token from query parameters or hash
-        let token = to.query.access_token
-
-        if (!token && window.location.hash) {
-          const hashParams = new URLSearchParams(window.location.hash.substring(1)) // Remove "#"
-          token = hashParams.get('access_token')
-        }
+        // Extract token from the query params (as passed in the reset link)
+        const token = to.query.access_token
 
         console.log('Retrieved token:', token) // Debugging line
-        console.log('Access Token from route query:', route.query.access_token)
-        console.log('Access Token from window hash:', window.location.hash)
 
-        // If token is not found, redirect to login
         if (!token) {
           console.warn('Missing access token. Redirecting to login.')
           next('/login')
           return
         }
 
-        // Proceed if token exists
+        // Proceed if the token is present
         next()
       }
     },
