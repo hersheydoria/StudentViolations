@@ -25,11 +25,12 @@ const router = createRouter({
       path: '/reset-password',
       name: 'ResetPassword',
       component: ResetPasswordView,
+      meta: { requiresAuth: false }, // Ensure this route is excluded from auth checks
       beforeEnter: (to, from, next) => {
         if (!to.query.access_token) {
           next('/login') // Redirect if no token is provided
         } else {
-          next()
+          next() // Allow access
         }
       }
     },
@@ -47,8 +48,9 @@ const router = createRouter({
   ]
 })
 
-// Use the reactive `authState` in the router guard
+// Global guard for authenticated routes
 router.beforeEach((to, from, next) => {
+  // Skip auth checks for routes that explicitly do not require authentication
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect to login if not authenticated
   } else {
