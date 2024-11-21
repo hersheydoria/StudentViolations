@@ -27,16 +27,18 @@ function parseHash(hash) {
 }
 
 onMounted(() => {
-  // Attempt to retrieve the access_token from query
-  let tokenFromUrl = route.query.access_token || localStorage.getItem('accessToken')
+  // First check for token in query parameters
+  let tokenFromUrl = route.query.access_token
 
-  // If not in query or localStorage, check the hash fragment for access_token
+  // If no token in query, check the hash fragment for token
   if (!tokenFromUrl && window.location.hash) {
     const hashParams = parseHash(window.location.hash.substring(1)) // Remove leading "#"
     tokenFromUrl = hashParams.access_token
   }
 
-  console.log('Access Token:', tokenFromUrl) // Debugging line
+  console.log('Access Token from URL or hash:', tokenFromUrl) // Debugging line
+  console.log('Access Token from route query:', route.query.access_token)
+  console.log('Access Token from window hash:', window.location.hash)
 
   if (!tokenFromUrl) {
     errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
