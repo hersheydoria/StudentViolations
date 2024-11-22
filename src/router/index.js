@@ -19,13 +19,12 @@ const router = createRouter({
       path: '/reset-password',
       name: 'ResetPassword',
       component: ResetPasswordView,
-      props: (route) => ({ access_token: route.query.access_token }),
+      props: (route) => ({ accessToken: route.query.access_token }), // Pass accessToken as a prop
       beforeEnter: (to, from, next) => {
         const hasAccessToken =
           to.query.access_token || window.location.hash.includes('access_token')
         if (!hasAccessToken) {
-          // Redirect to login if no access token is present
-          next('/login')
+          next('/login') // Redirect to login if no access token is present
         } else {
           next() // Allow access if access token is found
         }
