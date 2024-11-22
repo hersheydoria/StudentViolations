@@ -1,19 +1,22 @@
 <script setup>
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ResetPasswordForm from '@/components/auth/ResetPasswordForm.vue'
 
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-
 const route = useRoute()
 
-// Access token from the route's query parameters
+// Ensure access token is retrieved correctly
 const accessToken = ref(route.query.token || '')
+
 onMounted(() => {
-  console.log('Access Token in Parent:', accessToken.value)
+  if (!accessToken.value) {
+    // Handle case where there is no token
+    console.error('No access token found in the query parameters')
+    // Optionally redirect to login if no token
+  }
 })
 </script>
-
 <template>
   <v-app>
     <AppLayout>
