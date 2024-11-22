@@ -25,35 +25,32 @@ const router = createRouter({
       beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
 
-        // Get the access token and email from the URL query parameters
-        let token = to.query.access_token || null
-        let email = to.query.email || null
+        // Get the redirect_to parameter
+        const redirectUrl = to.query.redirect_to || null
 
-        // If email or token is missing, check the redirect_to URL parameter
-        if (!token || !email) {
-          if (to.query.redirect_to) {
-            try {
-              const redirectUrl = new URL(to.query.redirect_to)
-              token = redirectUrl.searchParams.get('access_token')
-              email = redirectUrl.searchParams.get('email')
-
-              console.log('Redirect URL:', redirectUrl.toString()) // Debugging the full redirect URL
-              console.log('Extracted Token:', token)
-              console.log('Extracted Email:', email)
-            } catch (error) {
-              console.error('Error parsing redirect_to URL:', error.message)
-            }
-          }
-        }
-
-        // If token or email is still missing, redirect to login
-        if (!token || !email) {
-          console.warn('Token or email is missing. Redirecting to login.')
+        if (!redirectUrl) {
+          console.warn('No redirect_to URL found. Redirecting to login.')
           return next('/login')
         }
 
         try {
-          // Verify the OTP token with the provided email
+          // Parse the redirect_to URL
+          const redirect = new URL(redirectUrl)
+
+          // Extract token and email from the redirect URL
+          const token = redirect.searchParams.get('access_token')
+          const email = redirect.searchParams.get('email')
+
+          console.log('Redirect URL:', redirect.toString()) // Debugging: log the entire redirect URL
+          console.log('Extracted Token:', token) // Debugging: log the token
+          console.log('Extracted Email:', email) // Debugging: log the email
+
+          if (!token || !email) {
+            console.warn('Token or email is missing in the redirect URL. Redirecting to login.')
+            return next('/login')
+          }
+
+          // Verify the OTP token with the extracted email
           const { data, error } = await supabase.auth.verifyOtp({
             type: 'recovery',
             token,
@@ -75,9 +72,8 @@ const router = createRouter({
 
           next()
         } catch (err) {
-          console.error('Unexpected error during token verification:', err.message)
-          await supabase.auth.signOut()
-          next('/login')
+          console.error('Error parsing redirect_to URL:', err.message)
+          return next('/login')
         }
       }
     },
