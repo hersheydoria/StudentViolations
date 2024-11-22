@@ -17,13 +17,13 @@ const token = piniaStore.token
 const router = useRouter()
 
 onMounted(() => {
-  if (!token) {
+  if (!piniaStore.recoveryToken) {
     errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
     setTimeout(() => router.push('/login'), 2000)
     return
   }
 
-  verifyToken(token)
+  console.log('Token is valid. Proceeding to reset password page.')
 })
 
 async function verifyToken(token) {

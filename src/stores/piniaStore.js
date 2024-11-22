@@ -2,11 +2,15 @@ import { defineStore } from 'pinia'
 
 export const usePiniaStore = defineStore('piniaStore', {
   state: () => ({
-    token: null
+    sessionToken: null,
+    recoveryToken: null
   }),
   actions: {
-    setToken(token) {
-      this.token = token
+    setSessionToken(token) {
+      this.sessionToken = token
+    },
+    setRecoveryToken(token) {
+      this.recoveryToken = token
     }
   }
 })

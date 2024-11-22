@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { usePiniaStore } from '@/stores/piniaStore'
 import { supabase } from '@/stores/supabase'
-import { authState } from '@/main.js'
+import { authState } from '@/main.js' // Global authentication state
 import LoginView from '@/views/auth/LoginView.vue'
 import VisitorView from '@/views/system/VisitorView.vue'
 import HomeView from '@/views/system/HomeView.vue'
@@ -25,7 +25,7 @@ const router = createRouter({
       beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
 
-        // Attempt to retrieve token from query string or hash
+        // Retrieve token from query string or hash
         let token = to.query.access_token || null
         if (!token && window.location.hash) {
           const hashParams = new URLSearchParams(window.location.hash.slice(1))
@@ -38,19 +38,23 @@ const router = createRouter({
         }
 
         try {
-          // Verify token for recovery type
-          const { error } = await supabase.auth.verifyOtp({
+          // Verify the OTP token for recovery
+          const { data, error } = await supabase.auth.verifyOtp({
             type: 'recovery',
             token
           })
 
           if (error) {
             console.error('Token verification failed:', error.message)
-            return next('/login') // Redirect to login if invalid or expired
+            return next('/login') // Redirect to login on failure
           }
 
-          // Store valid token in Pinia store
-          piniaStore.setToken(token)
+          console.log('Token verified successfully.', data)
+
+          // Store recovery token in Pinia
+          piniaStore.setRecoveryToken(token)
+
+          // Proceed to reset-password route
           next()
         } catch (err) {
           console.error('Unexpected error during token verification:', err.message)
@@ -68,17 +72,21 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
       meta: { requiresAuth: true }
-    }
+    },
+    // Fallback for undefined routes
+    { path: '/:pathMatch(.*)*', redirect: '/login' }
   ]
 })
 
 // Global guard for authenticated routes
 router.beforeEach((to, from, next) => {
+  // Skip global guards for the ResetPassword route
   if (to.name === 'ResetPassword') {
-    next() // Skip global guards for password reset
+    next()
     return
   }
 
+  // Check for authentication on protected routes
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect to login if not authenticated
   } else {
