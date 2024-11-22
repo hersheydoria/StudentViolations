@@ -24,11 +24,17 @@ const router = createRouter({
       meta: { requiresAuth: false },
       beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
-        let token = to.query.access_token
+
+        // Attempt to retrieve token from query string or hash
+        let token = to.query.access_token || null
+        if (!token && window.location.hash) {
+          const hashParams = new URLSearchParams(window.location.hash.slice(1))
+          token = hashParams.get('access_token')
+        }
 
         if (!token) {
           console.warn('No token provided. Redirecting to login.')
-          return next('/login')
+          return next('/login') // Redirect if token is missing
         }
 
         try {
@@ -43,11 +49,11 @@ const router = createRouter({
             return next('/login') // Redirect to login if invalid or expired
           }
 
-          // Store valid token in Pinia store for reset-password component
+          // Store valid token in Pinia store
           piniaStore.setToken(token)
           next()
         } catch (err) {
-          console.error('Unexpected error during token verification:', err)
+          console.error('Unexpected error during token verification:', err.message)
           next('/login') // Redirect on unexpected errors
         }
       }
