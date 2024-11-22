@@ -6,7 +6,8 @@ import { useRouter } from 'vue-router'
 const props = defineProps({
   accessToken: {
     type: String,
-    required: true
+    required: false, // Make it optional
+    default: '' // Set a default empty string if not passed
   }
 })
 
