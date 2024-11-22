@@ -19,8 +19,7 @@ const router = createRouter({
       path: '/reset-password',
       name: 'ResetPassword',
       component: ResetPasswordView,
-      props: (route) => ({ access_token: route.query.access_token }), // Pass access token as prop
-      meta: { requiresAuth: false } // Allow access without authentication
+      props: (route) => ({ access_token: route.query.access_token }) // Pass access token as prop
     },
     {
       path: '/visitor',
@@ -38,12 +37,6 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  // Allow access to ResetPassword without authentication
-  if (to.name === 'ResetPassword') {
-    next()
-    return
-  }
-
   // Check for authentication on routes that require it
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect to login if not authenticated
