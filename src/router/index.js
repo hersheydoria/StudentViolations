@@ -25,26 +25,12 @@ const router = createRouter({
       beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
 
-        let token = to.query.access_token || null
-        let email = to.query.email || null
+        let token = to.query.token || null // Extract token from query params
+        let email = to.query.email || null // Extract email from query params
 
         console.log('Initial Query Params:', to.query)
-
-        // Check the hash fragment if token or email is missing
-        if (!token || !email) {
-          try {
-            const hashParams = new URLSearchParams(window.location.hash.slice(1))
-            token = token || hashParams.get('access_token')
-            email = email || hashParams.get('email')
-
-            console.log('Extracted from Hash Fragment:', {
-              token,
-              email
-            })
-          } catch (error) {
-            console.error('Error parsing URL hash fragment:', error.message)
-          }
-        }
+        console.log('Extracted Token:', token)
+        console.log('Extracted Email:', email)
 
         if (!token || !email) {
           console.warn('Token or email is missing. Redirecting to login.')

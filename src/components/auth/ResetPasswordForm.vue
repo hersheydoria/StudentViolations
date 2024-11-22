@@ -11,29 +11,26 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 const piniaStore = usePiniaStore()
-const recoveryToken = piniaStore.recoveryToken
+const recoveryToken = piniaStore.recoveryToken // Pinia store holding the token
 const router = useRouter()
 
-onMounted(async () => {
+onMounted(() => {
   if (!recoveryToken) {
-    try {
-      // Attempt to re-extract token from URL as a fallback
-      const hashParams = new URLSearchParams(window.location.hash.slice(1))
-      const token = hashParams.get('access_token')
-      if (token) {
-        piniaStore.setRecoveryToken(token)
-        console.log('Fallback token extraction succeeded.')
-      } else {
-        throw new Error('Token missing')
-      }
-    } catch (error) {
+    // If no recovery token is in Pinia, attempt to re-extract it from the URL query params
+    const urlParams = new URLSearchParams(window.location.search)
+    const token = urlParams.get('token')
+
+    if (token) {
+      piniaStore.setRecoveryToken(token) // Store the token in Pinia
+      console.log('Token extracted from URL query parameters.')
+    } else {
+      // If no token is found in the query parameters, show an error message
       errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
       setTimeout(() => router.push('/login'), 2000)
-      return
     }
+  } else {
+    console.log('Valid token detected. Proceed to reset password.')
   }
-
-  console.log('Valid token detected. Proceed to reset password.')
 })
 
 async function updatePassword() {
