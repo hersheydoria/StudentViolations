@@ -36,10 +36,18 @@ const router = createRouter({
         }
 
         try {
-          // Verify the token without creating a session
+          // Retrieve the email from the query parameters or another source if applicable
+          const email = to.query.email
+          if (!email) {
+            console.error('Email is missing in query parameters. Redirecting to login.')
+            return next('/login')
+          }
+
+          // Verify the OTP token with the provided email
           const { data, error } = await supabase.auth.verifyOtp({
             type: 'recovery',
-            token
+            token,
+            email // Include the email here
           })
 
           if (error) {
@@ -49,7 +57,7 @@ const router = createRouter({
 
           console.log('Token verified successfully.', data)
 
-          // Store the token temporarily for the reset-password flow
+          // Store the recovery token in Pinia for later use
           piniaStore.setRecoveryToken(token)
 
           // Sign out to prevent automatic login
