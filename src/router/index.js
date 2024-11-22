@@ -39,7 +39,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect unauthenticated users to login
   } else if (to.name === 'ResetPassword' && authState.isAuthenticated) {
-    next('/home') // Prevent authenticated users from accessing reset password page
+    next('/login') // Prevent authenticated users from accessing reset password page
   } else {
     next() // Proceed with the route
   }
