@@ -4,7 +4,6 @@ import { usePiniaStore } from '@/stores/piniaStore'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/stores/supabase'
 
-// State variables
 const newPassword = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
@@ -21,7 +20,7 @@ onMounted(() => {
     setTimeout(() => router.push('/login'), 2000)
     return
   }
-  console.log('Token is valid. Proceeding to reset password page.')
+  console.log('Valid token detected. Proceed to reset password.')
 })
 
 async function updatePassword() {
@@ -29,7 +28,6 @@ async function updatePassword() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  // Ensure passwords match
   if (newPassword.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match.'
     loading.value = false
@@ -37,7 +35,6 @@ async function updatePassword() {
   }
 
   try {
-    // Update the user's password
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value
     })
@@ -50,7 +47,6 @@ async function updatePassword() {
     newPassword.value = ''
     confirmPassword.value = ''
 
-    // Redirect to login after a delay
     setTimeout(() => router.push('/login'), 2000)
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
