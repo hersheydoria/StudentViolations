@@ -1,20 +1,15 @@
 <script setup>
-import { ref, onMounted, inject } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref } from 'vue'
 import { supabase } from '@/stores/supabase'
+import { useRouter } from 'vue-router'
 
-// Inject the global auth state
-const authState = inject('authState')
-
-// Define Props
-defineProps({
+const props = defineProps({
   accessToken: {
     type: String,
-    required: true // Ensure this prop is passed and is required
+    required: true
   }
 })
 
-// Form state
 const newPassword = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
@@ -22,31 +17,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 const router = useRouter()
-
-// Validation rules
-const rules = {
-  required: (value) => !!value || 'Field is required',
-  passwordMin: (value) => value?.length >= 8 || 'Password must be at least 8 characters long'
-}
-
-const confirmPasswordMatch = (value) => value === newPassword.value || 'Passwords do not match.'
-
-onMounted(async () => {
-  // Use the accessToken prop directly
-  if (!accessToken) {
-    errorMessage.value = 'Invalid or missing access token. Please use the link sent to your email.'
-    setTimeout(() => router.push('/login'), 3000) // Redirect after 3 seconds
-    return
-  }
-
-  authState.isPasswordResetting = true
-
-  // Log out any currently logged-in user
-  const { user } = await supabase.auth.getUser()
-  if (user) {
-    await supabase.auth.signOut()
-  }
-})
+console.log('Access Token:', props.accessToken)
 
 async function updatePassword() {
   loading.value = true
@@ -62,7 +33,7 @@ async function updatePassword() {
   try {
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value,
-      access_token: accessToken // Use the accessToken prop directly
+      access_token: props.accessToken // Access token from the prop
     })
 
     if (error) {
@@ -73,15 +44,12 @@ async function updatePassword() {
     newPassword.value = ''
     confirmPassword.value = ''
 
-    authState.isPasswordResetting = false
-
     setTimeout(() => router.push('/login'), 2000)
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
     console.error('Password reset error:', error)
   } finally {
     loading.value = false
-    authState.isPasswordResetting = false
   }
 }
 </script>
