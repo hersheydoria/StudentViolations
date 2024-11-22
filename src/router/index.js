@@ -24,30 +24,27 @@ const router = createRouter({
       meta: { requiresAuth: false },
       beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
+
         let token = to.query.access_token || null
-        if (!token && window.location.hash) {
-          const hashParams = new URLSearchParams(window.location.hash.slice(1))
-          token = hashParams.get('access_token')
+        let email = to.query.email || null
+
+        // If email is not in the URL, check if it is in the redirect_to URL (from Supabase's link)
+        if (!email && to.query.redirect_to) {
+          const redirectUrl = new URL(to.query.redirect_to)
+          email = redirectUrl.searchParams.get('email')
         }
 
-        if (!token) {
-          console.warn('No token provided. Redirecting to login.')
+        if (!token || !email) {
+          console.warn('Token or email is missing. Redirecting to login.')
           return next('/login')
         }
 
         try {
-          // Retrieve the email from the query parameters or another source if applicable
-          const email = to.query.email
-          if (!email) {
-            console.error('Email is missing in query parameters. Redirecting to login.')
-            return next('/login')
-          }
-
           // Verify the OTP token with the provided email
           const { data, error } = await supabase.auth.verifyOtp({
             type: 'recovery',
             token,
-            email // Include the email here
+            email // Pass email to the verifyOtp function
           })
 
           if (error) {
