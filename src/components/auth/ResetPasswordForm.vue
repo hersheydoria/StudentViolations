@@ -23,12 +23,14 @@ const getAccessToken = () => {
 onMounted(async () => {
   const token = getAccessToken() // Get the access token from the URL
   accessToken.value = token
+
   if (accessToken.value) {
     // Optionally, you can use the access token here to verify if it's valid
     // You could call a Supabase or custom API endpoint to validate the token
   }
 
-  const { user } = await supabase.auth.getUser()
+  // Log out the user if they are already logged in
+  const { user, error } = await supabase.auth.getUser()
   if (user) {
     await supabase.auth.signOut() // Ensure the user is logged out if logged in
   }
@@ -62,6 +64,7 @@ async function updatePassword() {
     setTimeout(() => router.push('/login'), 2000)
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
+    console.error('Password reset error:', error)
   } finally {
     loading.value = false
   }
