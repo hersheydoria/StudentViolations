@@ -6,15 +6,15 @@ import { supabase } from '@/stores/supabase'
 // Inject the global auth state
 const authState = inject('authState')
 
-// Props
+// Define Props
 defineProps({
   accessToken: {
     type: String,
-    required: true // Access token is mandatory
+    required: true // Ensure this prop is passed and is required
   }
 })
 
-// Reactive state for the form
+// Form state
 const newPassword = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
@@ -32,10 +32,10 @@ const rules = {
 const confirmPasswordMatch = (value) => value === newPassword.value || 'Passwords do not match.'
 
 onMounted(async () => {
+  // Use the accessToken prop directly
   if (!accessToken) {
-    // Handle missing access token
     errorMessage.value = 'Invalid or missing access token. Please use the link sent to your email.'
-    setTimeout(() => router.push('/login'), 3000) // Redirect to login after 3 seconds
+    setTimeout(() => router.push('/login'), 3000) // Redirect after 3 seconds
     return
   }
 
@@ -62,7 +62,7 @@ async function updatePassword() {
   try {
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value,
-      access_token: accessToken // Use the access token prop
+      access_token: accessToken // Use the accessToken prop directly
     })
 
     if (error) {
