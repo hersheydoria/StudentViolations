@@ -24,13 +24,8 @@ onMounted(async () => {
   const token = getAccessToken() // Get the access token from the URL
   accessToken.value = token
 
-  if (accessToken.value) {
-    // Optionally, you can use the access token here to verify if it's valid
-    // You could call a Supabase or custom API endpoint to validate the token
-  }
-
   // Log out the user if they are already logged in
-  const { user, error } = await supabase.auth.getUser()
+  const { user } = await supabase.auth.getUser()
   if (user) {
     await supabase.auth.signOut() // Ensure the user is logged out if logged in
   }
