@@ -34,7 +34,8 @@ const vuetify = createVuetify({
 // Define the reactive authState
 export const authState = reactive({
   isAuthenticated: false,
-  user: null
+  user: null,
+  isPasswordResetting: false // Add flag to track password reset process
 }) // Exporting authState for use in router/index.js
 
 // Restore session and set authState
@@ -62,7 +63,11 @@ supabase.auth.onAuthStateChange((event, session) => {
         session.user.user_metadata?.last_name || ''
       }`.trim()
     }
-    router.push('/home') // Redirect to home immediately after sign-in
+
+    // Redirect only if not in the middle of a password reset
+    if (!authState.isPasswordResetting && router.currentRoute.value.name !== 'ResetPassword') {
+      router.push('/home')
+    }
   } else if (event === 'SIGNED_OUT') {
     authState.isAuthenticated = false
     authState.user = null
