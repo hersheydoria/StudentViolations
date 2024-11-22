@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { usePiniaStore } from '@/stores/piniaStore' // Import the store
+import { usePiniaStore } from '@/stores/piniaStore'
 import { supabase } from '@/stores/supabase'
 import { authState } from '@/main.js'
 import LoginView from '@/views/auth/LoginView.vue'
@@ -33,32 +33,29 @@ const router = createRouter({
         }
 
         if (token) {
-          piniaStore.setToken(token) // Store token in Pinia store
-          localStorage.setItem('auth_token', token) // Persist token in localStorage
+          piniaStore.setToken(token)
+          localStorage.setItem('auth_token', token)
 
-          // Check if token is expired
-          const tokenExpiry = JSON.parse(atob(token.split('.')[1])).exp * 1000
-          if (Date.now() > tokenExpiry) {
-            console.warn('Token expired. Attempting to refresh...')
+          try {
+            const { error } = await supabase.auth.verifyOtp({
+              type: 'recovery',
+              token,
+              redirectTo: `${window.location.origin}/reset-password`
+            })
 
-            // Token expired, attempt to refresh
-            supabase.auth
-              .refreshSession() // Use Supabase to refresh session
-              .then((newSession) => {
-                piniaStore.setToken(newSession.access_token) // Update token
-                console.log('Token refreshed successfully')
-                next() // Continue if refreshed
-              })
-              .catch((error) => {
-                console.error('Token refresh failed', error)
-                router.push('/login') // Redirect to login if refresh fails
-              })
-          } else {
-            next() // Token is still valid, continue navigation
+            if (error) {
+              console.error('Token verification failed:', error.message)
+              next('/login')
+            } else {
+              next() // Token valid, proceed
+            }
+          } catch (err) {
+            console.error('Unexpected error:', err.message)
+            next('/login')
           }
         } else {
           console.warn('Missing access token. Redirecting to login.')
-          router.push('/login') // Redirect to login if no token
+          next('/login')
         }
       }
     },
@@ -78,6 +75,11 @@ const router = createRouter({
 
 // Global guard for authenticated routes
 router.beforeEach((to, from, next) => {
+  if (to.name === 'ResetPassword') {
+    next() // Skip global guards for password reset
+    return
+  }
+
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect to login if not authenticated
   } else {
