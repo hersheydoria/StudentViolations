@@ -30,10 +30,12 @@ async function verifyToken(token) {
   try {
     const { error } = await supabase.auth.verifyOtp({
       type: 'recovery',
-      token
+      token,
+      redirectTo: `${window.location.origin}/reset-password`
     })
 
     if (error) {
+      console.error('Token verification failed:', error.message)
       errorMessage.value = 'Invalid or expired token. Please request a new reset link.'
       setTimeout(() => router.push('/login'), 2000)
     }
