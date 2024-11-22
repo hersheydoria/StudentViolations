@@ -18,9 +18,7 @@ const router = createRouter({
     {
       path: '/reset-password',
       name: 'ResetPassword',
-      component: ResetPasswordView,
-      props: (route) => ({ access_token: route.query.access_token }),
-      meta: { requiresAuth: false, resetPassword: true }
+      component: ResetPasswordView
     },
     {
       path: '/visitor',
