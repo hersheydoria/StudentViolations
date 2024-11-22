@@ -1,4 +1,6 @@
 <script setup>
+import AppLayout from '@/components/layout/AppLayout.vue'
+import ResetPasswordForm from '@/components/auth/ResetPasswordForm.vue'
 import { defineProps } from 'vue'
 
 const { accessToken } = defineProps({
@@ -8,7 +10,6 @@ const { accessToken } = defineProps({
   }
 })
 
-// Log accessToken to ensure it's passed correctly
 console.log('Access Token:', accessToken)
 </script>
 
