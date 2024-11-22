@@ -28,31 +28,30 @@ const router = createRouter({
         let token = to.query.access_token || null
         let email = to.query.email || null
 
-        console.log('Query Params:', to.query)
-        console.log('Extracted Token:', token)
-        console.log('Extracted Email:', email)
+        console.log('Initial Query Params:', to.query)
 
-        // Fallback: Extract token and email from URL fragment if missing
+        // Check the hash fragment if token or email is missing
         if (!token || !email) {
           try {
             const hashParams = new URLSearchParams(window.location.hash.slice(1))
             token = token || hashParams.get('access_token')
             email = email || hashParams.get('email')
 
-            console.log('Extracted from URL Fragment - Token:', token, 'Email:', email)
+            console.log('Extracted from Hash Fragment:', {
+              token,
+              email
+            })
           } catch (error) {
-            console.error('Error parsing URL fragment:', error.message)
+            console.error('Error parsing URL hash fragment:', error.message)
           }
         }
 
-        // Redirect to login if token or email is still missing
         if (!token || !email) {
           console.warn('Token or email is missing. Redirecting to login.')
           return next('/login')
         }
 
         try {
-          // Verify the OTP token with the provided email
           const { data, error } = await supabase.auth.verifyOtp({
             type: 'recovery',
             token,
@@ -64,12 +63,9 @@ const router = createRouter({
             return next('/login')
           }
 
-          console.log('Token verified successfully.', data)
-
-          // Store the recovery token in Pinia for later use
+          console.log('Token verified successfully:', data)
           piniaStore.setRecoveryToken(token)
 
-          // Sign out to prevent automatic login
           await supabase.auth.signOut()
 
           next()

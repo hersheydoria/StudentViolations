@@ -14,12 +14,25 @@ const piniaStore = usePiniaStore()
 const recoveryToken = piniaStore.recoveryToken
 const router = useRouter()
 
-onMounted(() => {
+onMounted(async () => {
   if (!recoveryToken) {
-    errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
-    setTimeout(() => router.push('/login'), 2000)
-    return
+    try {
+      // Attempt to re-extract token from URL as a fallback
+      const hashParams = new URLSearchParams(window.location.hash.slice(1))
+      const token = hashParams.get('access_token')
+      if (token) {
+        piniaStore.setRecoveryToken(token)
+        console.log('Fallback token extraction succeeded.')
+      } else {
+        throw new Error('Token missing')
+      }
+    } catch (error) {
+      errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
+      setTimeout(() => router.push('/login'), 2000)
+      return
+    }
   }
+
   console.log('Valid token detected. Proceed to reset password.')
 })
 
