@@ -24,38 +24,31 @@ const router = createRouter({
       meta: { requiresAuth: false },
       beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
-        let token = to.query.access_token || localStorage.getItem('auth_token')
+        let token = to.query.access_token
 
-        // If no token in URL or localStorage, try retrieving from hash
-        if (!token && window.location.hash) {
-          const hashParams = new URLSearchParams(window.location.hash.slice(1))
-          token = hashParams.get('access_token')
+        if (!token) {
+          console.warn('No token provided. Redirecting to login.')
+          return next('/login')
         }
 
-        if (token) {
-          piniaStore.setToken(token)
-          localStorage.setItem('auth_token', token)
+        try {
+          // Verify token for recovery type
+          const { error } = await supabase.auth.verifyOtp({
+            type: 'recovery',
+            token
+          })
 
-          try {
-            const { error } = await supabase.auth.verifyOtp({
-              type: 'recovery',
-              token,
-              redirectTo: `${window.location.origin}/reset-password`
-            })
-
-            if (error) {
-              console.error('Token verification failed:', error.message)
-              next('/login')
-            } else {
-              next() // Token valid, proceed
-            }
-          } catch (err) {
-            console.error('Unexpected error:', err.message)
-            next('/login')
+          if (error) {
+            console.error('Token verification failed:', error.message)
+            return next('/login') // Redirect to login if invalid or expired
           }
-        } else {
-          console.warn('Missing access token. Redirecting to login.')
-          next('/login')
+
+          // Store valid token in Pinia store for reset-password component
+          piniaStore.setToken(token)
+          next()
+        } catch (err) {
+          console.error('Unexpected error during token verification:', err)
+          next('/login') // Redirect on unexpected errors
         }
       }
     },
