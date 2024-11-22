@@ -29,12 +29,12 @@ const router = createRouter({
         let token = to.query.access_token || null
         let email = to.query.email || null
 
-        // Handle missing token and email from the redirect URL
+        // Attempt to extract from URL fragment if missing
         if (!token || !email) {
           try {
             const hashParams = new URLSearchParams(window.location.hash.slice(1)) // Parse the URL fragment
-            token = hashParams.get('access_token')
-            email = hashParams.get('email')
+            token = token || hashParams.get('access_token')
+            email = email || hashParams.get('email')
 
             console.log('Extracted from URL Fragment - Token:', token, 'Email:', email)
           } catch (error) {
@@ -42,7 +42,7 @@ const router = createRouter({
           }
         }
 
-        // If token or email is still missing, redirect to login
+        // Redirect to login if token or email is missing
         if (!token || !email) {
           console.warn('Token or email is missing. Redirecting to login.')
           return next('/login')
