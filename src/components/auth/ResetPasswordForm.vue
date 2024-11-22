@@ -6,7 +6,7 @@ import { useRouter } from 'vue-router'
 const props = defineProps({
   accessToken: {
     type: String,
-    required: true
+    required: true // Ensure accessToken is required here
   }
 })
 
@@ -17,7 +17,6 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 const router = useRouter()
-console.log('Access Token:', props.accessToken)
 
 async function updatePassword() {
   loading.value = true
@@ -33,7 +32,7 @@ async function updatePassword() {
   try {
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value,
-      access_token: props.accessToken // Access token from the prop
+      access_token: props.accessToken // Ensure you're using props.accessToken here
     })
 
     if (error) {
