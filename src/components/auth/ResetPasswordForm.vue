@@ -3,35 +3,42 @@ import { ref, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/stores/supabase'
 
+// Inject the global auth state
 const authState = inject('authState')
 
+// Props
+defineProps({
+  accessToken: {
+    type: String,
+    required: true // Access token is mandatory
+  }
+})
+
+// Reactive state for the form
 const newPassword = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const accessToken = ref('')
 
 const router = useRouter()
 
-// Extract the access token from the URL hash
-const getAccessToken = () => {
-  const hash = window.location.hash.substr(1) // Remove the leading '#'
-  const params = new URLSearchParams(hash)
-  return params.get('access_token') // Retrieve the access_token
+// Validation rules
+const rules = {
+  required: (value) => !!value || 'Field is required',
+  passwordMin: (value) => value?.length >= 8 || 'Password must be at least 8 characters long'
 }
 
-onMounted(async () => {
-  const token = getAccessToken() // Get the access token from the URL
-  accessToken.value = token
+const confirmPasswordMatch = (value) => value === newPassword.value || 'Passwords do not match.'
 
-  if (!accessToken.value) {
+onMounted(async () => {
+  if (!accessToken) {
+    // Handle missing access token
     errorMessage.value = 'Invalid or missing access token. Please use the link sent to your email.'
     setTimeout(() => router.push('/login'), 3000) // Redirect to login after 3 seconds
     return
   }
 
-  // Indicate that a password reset process is ongoing
   authState.isPasswordResetting = true
 
   // Log out any currently logged-in user
@@ -54,7 +61,8 @@ async function updatePassword() {
 
   try {
     const { error } = await supabase.auth.updateUser({
-      password: newPassword.value
+      password: newPassword.value,
+      access_token: accessToken // Use the access token prop
     })
 
     if (error) {
@@ -65,10 +73,8 @@ async function updatePassword() {
     newPassword.value = ''
     confirmPassword.value = ''
 
-    // Clear the password resetting flag
     authState.isPasswordResetting = false
 
-    // Automatically redirect after 2 seconds
     setTimeout(() => router.push('/login'), 2000)
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
@@ -81,9 +87,8 @@ async function updatePassword() {
 </script>
 
 <template>
-  <v-form v-model="valid" lazy-validation @keyup.enter="updatePassword">
-    <!-- Trigger on Enter key -->
-    <!-- New Password field -->
+  <v-form @keyup.enter="updatePassword">
+    <!-- New Password -->
     <v-text-field
       v-model="newPassword"
       :rules="[rules.required, rules.passwordMin]"
@@ -93,7 +98,7 @@ async function updatePassword() {
       required
     ></v-text-field>
 
-    <!-- Confirm Password field -->
+    <!-- Confirm Password -->
     <v-text-field
       v-model="confirmPassword"
       :rules="[rules.required, confirmPasswordMatch]"
@@ -103,16 +108,17 @@ async function updatePassword() {
       required
     ></v-text-field>
 
-    <!-- Display error message if there's an error -->
+    <!-- Error Alert -->
     <v-alert v-if="errorMessage" type="error" class="mt-4">
       {{ errorMessage }}
     </v-alert>
 
-    <!-- Display success message if password is updated successfully -->
+    <!-- Success Alert -->
     <v-alert v-if="successMessage" type="success" class="mt-4">
       {{ successMessage }}
     </v-alert>
 
+    <!-- Submit Button -->
     <v-row>
       <v-col class="text-right">
         <v-btn
