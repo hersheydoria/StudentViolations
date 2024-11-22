@@ -25,7 +25,7 @@ const router = createRouter({
       beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
 
-        // Retrieve the token from query string or hash
+        // Retrieve the recovery token from the URL (query string or hash)
         let token = to.query.access_token || null
         if (!token && window.location.hash) {
           const hashParams = new URLSearchParams(window.location.hash.slice(1))
@@ -38,8 +38,11 @@ const router = createRouter({
         }
 
         try {
-          // Use exchangeCodeForSession instead of verifyOtp for recovery
-          const { data, error } = await supabase.auth.exchangeCodeForSession(token)
+          // Verify the OTP token for password recovery
+          const { data, error } = await supabase.auth.verifyOtp({
+            type: 'recovery',
+            token
+          })
 
           if (error) {
             console.error('Token verification failed:', error.message)
@@ -48,16 +51,16 @@ const router = createRouter({
 
           console.log('Token verified successfully.', data)
 
-          // Clear session data to prevent automatic login
-          await supabase.auth.signOut()
-
-          // Store recovery token in Pinia
+          // Store the recovery token in Pinia for later use
           piniaStore.setRecoveryToken(token)
 
-          // Proceed to reset-password route
+          // Proceed to the reset-password page
           next()
         } catch (err) {
           console.error('Unexpected error during token verification:', err.message)
+
+          // Ensure no unintended session creation
+          await supabase.auth.signOut()
           next('/login') // Redirect on unexpected errors
         }
       }
