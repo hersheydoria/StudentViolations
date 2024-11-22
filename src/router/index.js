@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { usePiniaStore } from '@/stores/piniaStore'
-import { supabase } from '@/stores/supabase'
 import { authState } from '@/main.js' // Global authentication state
 import LoginView from '@/views/auth/LoginView.vue'
 import VisitorView from '@/views/system/VisitorView.vue'
@@ -21,45 +19,8 @@ const router = createRouter({
       path: '/reset-password',
       name: 'ResetPassword',
       component: ResetPasswordView,
-      meta: { requiresAuth: false },
-      beforeEnter: async (to, from, next) => {
-        const piniaStore = usePiniaStore()
-
-        let token = to.query.token || null // Extract token from query params
-        let email = to.query.email || null // Extract email from query params
-
-        console.log('Initial Query Params:', to.query)
-        console.log('Extracted Token:', token)
-        console.log('Extracted Email:', email)
-
-        if (!token || !email) {
-          console.warn('Token or email is missing. Redirecting to login.')
-          return next('/login')
-        }
-
-        try {
-          const { data, error } = await supabase.auth.verifyOtp({
-            type: 'recovery',
-            token,
-            email
-          })
-
-          if (error) {
-            console.error('Token verification failed:', error.message)
-            return next('/login')
-          }
-
-          console.log('Token verified successfully:', data)
-          piniaStore.setRecoveryToken(token)
-
-          await supabase.auth.signOut()
-
-          next()
-        } catch (err) {
-          console.error('Unexpected error during token verification:', err.message)
-          return next('/login')
-        }
-      }
+      props: (route) => ({ access_token: route.query.access_token }), // Pass access token as prop
+      meta: { requiresAuth: false } // Allow access without authentication
     },
     {
       path: '/visitor',
@@ -77,15 +38,17 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
+  // Allow access to ResetPassword without authentication
   if (to.name === 'ResetPassword') {
     next()
     return
   }
 
+  // Check for authentication on routes that require it
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
-    next('/login')
+    next('/login') // Redirect to login if not authenticated
   } else {
-    next()
+    next() // Proceed with the route
   }
 })
 

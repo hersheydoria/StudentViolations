@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { usePiniaStore } from '@/stores/piniaStore'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/stores/supabase'
 
@@ -9,27 +8,29 @@ const confirmPassword = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const accessToken = ref('')
 
-const piniaStore = usePiniaStore()
-const recoveryToken = piniaStore.recoveryToken // Pinia store holding the token
 const router = useRouter()
 
-onMounted(() => {
-  if (!recoveryToken) {
-    // If no recovery token is in Pinia, attempt to re-extract it from the URL query params
-    const urlParams = new URLSearchParams(window.location.search)
-    const token = urlParams.get('token')
+// Function to extract access token from URL hash
+const getAccessToken = () => {
+  const hash = window.location.hash.substr(1) // Remove the leading '#'
+  const params = new URLSearchParams(hash)
+  return params.get('access_token') // Retrieve the access_token
+}
 
-    if (token) {
-      piniaStore.setRecoveryToken(token) // Store the token in Pinia
-      console.log('Token extracted from URL query parameters.')
-    } else {
-      // If no token is found in the query parameters, show an error message
-      errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
-      setTimeout(() => router.push('/login'), 2000)
-    }
-  } else {
-    console.log('Valid token detected. Proceed to reset password.')
+// Sign out any currently logged-in user
+onMounted(async () => {
+  const token = getAccessToken() // Get the access token from the URL
+  accessToken.value = token
+  if (accessToken.value) {
+    // Optionally, you can use the access token here to verify if it's valid
+    // You could call a Supabase or custom API endpoint to validate the token
+  }
+
+  const { user } = await supabase.auth.getUser()
+  if (user) {
+    await supabase.auth.signOut() // Ensure the user is logged out if logged in
   }
 })
 
@@ -57,6 +58,7 @@ async function updatePassword() {
     newPassword.value = ''
     confirmPassword.value = ''
 
+    // Automatically redirect after 2 seconds
     setTimeout(() => router.push('/login'), 2000)
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
