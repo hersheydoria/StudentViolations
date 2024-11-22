@@ -7,54 +7,29 @@ import { supabase } from '@/stores/supabase'
 // State variables
 const newPassword = ref('')
 const confirmPassword = ref('')
-const valid = ref(true)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
 const piniaStore = usePiniaStore()
-const token = piniaStore.token
+const recoveryToken = piniaStore.recoveryToken
 const router = useRouter()
 
 onMounted(() => {
-  if (!piniaStore.recoveryToken) {
+  if (!recoveryToken) {
     errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
     setTimeout(() => router.push('/login'), 2000)
     return
   }
-
   console.log('Token is valid. Proceeding to reset password page.')
 })
-
-async function verifyToken(token) {
-  try {
-    const { error } = await supabase.auth.verifyOtp({
-      type: 'recovery',
-      token
-    })
-
-    if (error) {
-      errorMessage.value = 'Invalid or expired token. Please request a new reset link.'
-      setTimeout(() => router.push('/login'), 2000)
-    }
-  } catch (err) {
-    console.error('Unexpected error:', err.message)
-    errorMessage.value = 'An unexpected error occurred. Please try again.'
-    setTimeout(() => router.push('/login'), 2000)
-  }
-}
 
 async function updatePassword() {
   loading.value = true
   errorMessage.value = ''
   successMessage.value = ''
 
-  if (!token) {
-    errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
-    loading.value = false
-    return
-  }
-
+  // Ensure passwords match
   if (newPassword.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match.'
     loading.value = false
@@ -62,6 +37,7 @@ async function updatePassword() {
   }
 
   try {
+    // Update the user's password
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value
     })
@@ -74,7 +50,8 @@ async function updatePassword() {
     newPassword.value = ''
     confirmPassword.value = ''
 
-    setTimeout(() => router.push('/login'), 2000) // Redirect after feedback
+    // Redirect to login after a delay
+    setTimeout(() => router.push('/login'), 2000)
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
   } finally {
