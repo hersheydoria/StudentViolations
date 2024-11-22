@@ -25,14 +25,18 @@ const router = createRouter({
       beforeEnter: async (to, from, next) => {
         const piniaStore = usePiniaStore()
 
-        // Extract token and email from the current URL fragment or query
+        // Extract token and email from query or URL fragment
         let token = to.query.access_token || null
         let email = to.query.email || null
+
+        console.log('Query Params:', to.query)
+        console.log('Extracted Token:', token)
+        console.log('Extracted Email:', email)
 
         // Attempt to extract from URL fragment if missing
         if (!token || !email) {
           try {
-            const hashParams = new URLSearchParams(window.location.hash.slice(1)) // Parse the URL fragment
+            const hashParams = new URLSearchParams(window.location.hash.slice(1))
             token = token || hashParams.get('access_token')
             email = email || hashParams.get('email')
 
@@ -42,7 +46,7 @@ const router = createRouter({
           }
         }
 
-        // Redirect to login if token or email is missing
+        // Redirect to login if token or email is still missing
         if (!token || !email) {
           console.warn('Token or email is missing. Redirecting to login.')
           return next('/login')
