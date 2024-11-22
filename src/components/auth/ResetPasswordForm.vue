@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { usePiniaStore } from '@/stores/piniaStore' // Import the store
+import { usePiniaStore } from '@/stores/piniaStore'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/stores/supabase'
 
@@ -12,8 +12,8 @@ const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
-const piniaStore = usePiniaStore() // Access the store
-const token = piniaStore.token // Retrieve the token from the store
+const piniaStore = usePiniaStore()
+const token = piniaStore.token
 const router = useRouter()
 
 onMounted(() => {
@@ -30,12 +30,10 @@ async function verifyToken(token) {
   try {
     const { error } = await supabase.auth.verifyOtp({
       type: 'recovery',
-      token,
-      redirectTo: `${window.location.origin}/reset-password`
+      token
     })
 
     if (error) {
-      console.error('Token verification failed:', error.message)
       errorMessage.value = 'Invalid or expired token. Please request a new reset link.'
       setTimeout(() => router.push('/login'), 2000)
     }
@@ -51,14 +49,12 @@ async function updatePassword() {
   errorMessage.value = ''
   successMessage.value = ''
 
-  // Check if token is valid
   if (!token) {
     errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
     loading.value = false
     return
   }
 
-  // Check if passwords match
   if (newPassword.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match.'
     loading.value = false
@@ -66,7 +62,6 @@ async function updatePassword() {
   }
 
   try {
-    // Update the user's password
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value
     })
@@ -79,8 +74,7 @@ async function updatePassword() {
     newPassword.value = ''
     confirmPassword.value = ''
 
-    // Redirect to login page after a short delay
-    setTimeout(() => router.push('/login'), 2000) // Delay for user feedback
+    setTimeout(() => router.push('/login'), 2000) // Redirect after feedback
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
   } finally {
