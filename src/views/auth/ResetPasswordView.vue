@@ -1,16 +1,17 @@
 <script setup>
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ResetPasswordForm from '@/components/auth/ResetPasswordForm.vue'
-import { defineProps } from 'vue'
 
-const { accessToken } = defineProps({
-  accessToken: {
-    type: String,
-    required: true
-  }
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+// Access token from the route's query parameters
+const accessToken = ref(route.query.token || '')
+onMounted(() => {
+  console.log('Access Token in Parent:', accessToken.value)
 })
-
-console.log('Access Token:', accessToken)
 </script>
 
 <template>

@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import { supabase } from '@/stores/supabase'
 import { useRouter } from 'vue-router'
 
-// Define props to receive accessToken from parent
 const props = defineProps({
   accessToken: {
     type: String,
@@ -19,7 +18,6 @@ const successMessage = ref('')
 
 const router = useRouter()
 
-// Log the access token to debug
 console.log('Access Token in ResetPasswordForm:', props.accessToken)
 
 async function updatePassword() {
@@ -36,7 +34,7 @@ async function updatePassword() {
   try {
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value,
-      access_token: props.accessToken // Ensure you're using the correct access token here
+      access_token: props.accessToken
     })
 
     if (error) {
@@ -47,7 +45,6 @@ async function updatePassword() {
     newPassword.value = ''
     confirmPassword.value = ''
 
-    // Redirect to login after a delay
     setTimeout(() => router.push('/login'), 2000)
   } catch (error) {
     errorMessage.value = 'An error occurred: ' + error.message
