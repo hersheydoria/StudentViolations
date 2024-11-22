@@ -1,32 +1,51 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router' // Import useRouter for navigation
-import { supabase } from '@/stores/supabase' // Import your supabase instance
+import { ref, onMounted, inject } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '@/stores/supabase'
+
+const authState = inject('authState')
 
 const newPassword = ref('')
 const confirmPassword = ref('')
-const valid = ref(true)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const router = useRouter() // Initialize the router
+const accessToken = ref('')
 
-// Validation rules
-const rules = {
-  required: (value) => !!value || 'Required.',
-  passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long'
+const router = useRouter()
+
+// Extract the access token from the URL hash
+const getAccessToken = () => {
+  const hash = window.location.hash.substr(1) // Remove the leading '#'
+  const params = new URLSearchParams(hash)
+  return params.get('access_token') // Retrieve the access_token
 }
 
-// Custom validation rule for matching passwords
-const confirmPasswordMatch = (v) => v === newPassword.value || 'Passwords do not match'
+onMounted(async () => {
+  const token = getAccessToken() // Get the access token from the URL
+  accessToken.value = token
 
-// Method to update the password
+  if (!accessToken.value) {
+    errorMessage.value = 'Invalid or missing access token. Please use the link sent to your email.'
+    setTimeout(() => router.push('/login'), 3000) // Redirect to login after 3 seconds
+    return
+  }
+
+  // Indicate that a password reset process is ongoing
+  authState.isPasswordResetting = true
+
+  // Log out any currently logged-in user
+  const { user } = await supabase.auth.getUser()
+  if (user) {
+    await supabase.auth.signOut()
+  }
+})
+
 async function updatePassword() {
   loading.value = true
   errorMessage.value = ''
   successMessage.value = ''
 
-  // Check if passwords match
   if (newPassword.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match.'
     loading.value = false
@@ -42,18 +61,21 @@ async function updatePassword() {
       throw error
     }
 
-    successMessage.value = 'Password updated successfully!'
+    successMessage.value = 'Password updated successfully! Redirecting to login...'
     newPassword.value = ''
     confirmPassword.value = ''
 
-    // Redirect to the login page after successful password update
-    setTimeout(() => {
-      router.push('/login') // Use the path of your login route
-    }, 1000) // Optional: Delay for 1 second before redirecting
+    // Clear the password resetting flag
+    authState.isPasswordResetting = false
+
+    // Automatically redirect after 2 seconds
+    setTimeout(() => router.push('/login'), 2000)
   } catch (error) {
-    errorMessage.value = 'Error: ' + error.message
+    errorMessage.value = 'An error occurred: ' + error.message
+    console.error('Password reset error:', error)
   } finally {
     loading.value = false
+    authState.isPasswordResetting = false
   }
 }
 </script>

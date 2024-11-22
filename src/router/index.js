@@ -18,7 +18,18 @@ const router = createRouter({
     {
       path: '/reset-password',
       name: 'ResetPassword',
-      component: ResetPasswordView
+      component: ResetPasswordView,
+      props: (route) => ({ access_token: route.query.access_token }),
+      beforeEnter: (to, from, next) => {
+        const hasAccessToken =
+          to.query.access_token || window.location.hash.includes('access_token')
+        if (!hasAccessToken) {
+          // Redirect to login if no access token is present
+          next('/login')
+        } else {
+          next() // Allow access if access token is found
+        }
+      }
     },
     {
       path: '/visitor',
@@ -38,8 +49,6 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect unauthenticated users to login
-  } else if (to.name === 'ResetPassword' && authState.isAuthenticated) {
-    next('/login') // Prevent authenticated users from accessing reset password page
   } else {
     next() // Proceed with the route
   }
