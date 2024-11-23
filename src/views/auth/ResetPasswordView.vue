@@ -34,7 +34,7 @@ onMounted(() => {
               <h3 class="font-weight-bold" style="color: #286643">Reset Password</h3>
             </v-card-title>
             <v-card-text>
-              <ResetPasswordForm></ResetPasswordForm>
+              <ResetPasswordForm :accessToken="accessToken" />
             </v-card-text>
           </v-card>
         </v-col>
