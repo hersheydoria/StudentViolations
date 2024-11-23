@@ -17,9 +17,10 @@ const router = createRouter({
     },
     {
       path: '/reset-password',
-      name: 'ResetPassword',
+      name: 'reset-password',
       component: ResetPasswordView,
-      props: (route) => ({ accessToken: route.query.access_token }) // Pass accessToken as a prop
+      props: (route) => ({ accessToken: route.query.access_token }), // Pass accessToken as a prop
+      meta: { requiresAuth: false } // No authentication required for reset password
     },
     {
       path: '/visitor',
@@ -36,10 +37,9 @@ const router = createRouter({
   ]
 })
 
-// Function to extract access token from URL hash
+// Function to extract access token from URL query
 const getAccessToken = () => {
-  const hash = window.location.hash.substr(1) // Remove the leading '#'
-  const params = new URLSearchParams(hash)
+  const params = new URLSearchParams(window.location.search) // Use search for query params
   return params.get('access_token') // Retrieve the access_token
 }
 
@@ -48,21 +48,23 @@ router.beforeEach((to, from, next) => {
     return next('/login') // Redirect unauthenticated users to login
   }
 
-  if (to.name === 'ResetPassword') {
+  if (to.name === 'reset-password') {
     console.log('Accessing ResetPassword route')
 
-    const accessToken = getAccessToken() // Use the helper function
+    const accessToken = getAccessToken() // Get access token from URL query
     console.log('Access Token:', accessToken)
 
-    if (authState.isAuthenticated) {
-      return next({ name: 'home' }) // Redirect logged-in users to home
-    }
-
     if (!accessToken) {
-      return next({ name: 'login' }) // Redirect to login if no token is present
+      // If no access token is found, redirect to login
+      return next({ name: 'login' })
     }
 
-    return next() // Allow access if the token exists
+    // Allow access to ResetPassword even if authenticated (you can adjust this if needed)
+    return next()
+  }
+
+  if (authState.isAuthenticated && (to.name === 'login' || to.name === 'reset-password')) {
+    return next({ name: 'home' }) // Redirect authenticated users from login or reset-password to home
   }
 
   next() // Default behavior for other routes
