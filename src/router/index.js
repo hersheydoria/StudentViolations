@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { authState } from '@/main.js' // Global authentication state
+import { authState } from '@/main.js'
+
 import LoginView from '@/views/auth/LoginView.vue'
 import VisitorView from '@/views/system/VisitorView.vue'
 import HomeView from '@/views/system/HomeView.vue'
@@ -8,7 +9,10 @@ import ResetPasswordView from '@/views/auth/ResetPasswordView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/login' },
+    {
+      path: '/',
+      redirect: '/login'
+    },
     {
       path: '/login',
       name: 'login',
@@ -19,7 +23,7 @@ const router = createRouter({
       path: '/reset-password',
       name: 'ResetPassword',
       component: ResetPasswordView,
-      props: (route) => ({ accessToken: route.query.access_token }) // Pass accessToken as a prop
+      meta: { requiresAuth: false }
     },
     {
       path: '/visitor',
@@ -31,48 +35,47 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
       meta: { requiresAuth: true }
-    },
-    { path: '/:pathMatch(.*)*', redirect: '/login' }
+    }
   ]
 })
 
-// Function to extract access token from URL hash
-const getAccessToken = () => {
-  const hash = window.location.hash.substr(1) // Remove the leading '#'
-  const params = new URLSearchParams(hash)
-  return params.get('access_token') // Retrieve the access_token
-}
-
 router.beforeEach((to, from, next) => {
-  // Handle routes that require authentication (requiresAuth = true)
-  if (to.meta.requiresAuth && !authState.isAuthenticated) {
-    return next('/login') // Redirect unauthenticated users to login
+  const isAuthenticated = authState.isAuthenticated
+  const requiresAuth = to.meta.requiresAuth
+  const isPasswordRecovery = authState.isPasswordRecovery
+
+  console.log('Route Guard:', { from, to })
+
+  // Case 1: If the route requires auth and the user is not authenticated, redirect to login
+  if (requiresAuth && !isAuthenticated) {
+    console.log('Unauthenticated user trying to access protected route. Redirecting to login.')
+    next({ name: 'login' })
   }
-
-  // Handle ResetPassword route access
-  if (to.name === 'ResetPassword') {
-    console.log('Accessing ResetPassword route')
-
-    const accessToken = getAccessToken() // Extract access token from URL hash
-    console.log('Access Token:', accessToken)
-
-    // If there's no access token and the user is not authenticated, redirect to login
-    if (!accessToken && !authState.isAuthenticated) {
-      return next({ name: 'login' })
-    }
-
-    // Allow access to ResetPassword even if not authenticated
-    return next()
+  // Case 2: If the route is ResetPassword and the user is NOT authenticated, proceed to login
+  else if (to.name === 'ResetPassword' && !isAuthenticated && !isPasswordRecovery) {
+    console.log('Unauthenticated user trying to access ResetPassword. Redirecting to login.')
+    next({ name: 'login' })
   }
-
-  // If the user is authenticated and trying to access login or reset password, redirect to home
-  // But exclude the reset password route from this check
-  if (authState.isAuthenticated && to.name === 'login') {
-    return next({ name: 'home' }) // Redirect authenticated users from login to home
+  // Case 3: If the route is ResetPassword and the user is authenticated, allow access
+  else if (to.name === 'ResetPassword' && isAuthenticated) {
+    console.log('Authenticated user trying to access ResetPassword. Proceeding.')
+    next() // Allow access to ResetPassword
   }
-
-  // Default behavior for other routes
-  next()
+  // Case 4: If the user is in the password recovery process, stay on ResetPassword page
+  else if (isPasswordRecovery && to.name !== 'ResetPassword') {
+    console.log('Password recovery process, staying on ResetPassword page.')
+    next({ name: 'ResetPassword' })
+  }
+  // Case 5: If the user is authenticated, proceed to the requested route
+  else if (isAuthenticated) {
+    console.log('Authenticated user, proceeding to route:', to.name)
+    next() // Proceed to the requested route
+  }
+  // Case 6: If none of the above, proceed normally
+  else {
+    console.log('Proceeding to route:', to.name)
+    next() // Allow access to any other route
+  }
 })
 
 export default router

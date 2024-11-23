@@ -1,27 +1,19 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import ResetPasswordForm from '@/components/auth/ResetPasswordForm.vue'
+import AppLayout from '@/components/layout/AppLayout.vue'
 
-// Function to extract access token from URL hash
-const getAccessToken = () => {
-  const hash = window.location.hash.substr(1) // Remove the leading '#'
-  const params = new URLSearchParams(hash)
-  return params.get('access_token') // Retrieve the access_token
+const route = useRoute()
+const router = useRouter()
+
+// Handle the case where access token is missing
+if (!route.query.access_token) {
+  console.error('Access token missing. Redirecting to login.')
+  router.push({ name: 'login' })
+} else {
+  console.log('Access token found:', route.query.access_token)
+  // Continue with the reset password logic if token is present
 }
-
-const accessToken = ref(null)
-
-onMounted(() => {
-  // Use the custom getAccessToken function to retrieve the token
-  accessToken.value = getAccessToken()
-  console.log('Access Token in ResetPasswordView:', accessToken.value)
-
-  if (!accessToken.value) {
-    // Handle case where access token is not available
-    console.error('No access token found in URL hash.')
-  }
-})
 </script>
 
 <template>
