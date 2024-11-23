@@ -56,13 +56,18 @@ router.beforeEach((to, from, next) => {
     const accessToken = getAccessToken() // Extract access token from URL hash
     console.log('Access Token:', accessToken)
 
-    // If no access token is found, redirect to login
+    // If there's no access token and the user is not authenticated, redirect to login
     if (!accessToken) {
       return next({ name: 'login' })
     }
 
-    // If there's an access token, allow access to ResetPassword even if not authenticated
-    return next()
+    // If access token is found, allow access to ResetPassword even if not authenticated
+    if (!authState.isAuthenticated) {
+      return next() // Allow access to ResetPassword page
+    }
+
+    // If the user is authenticated and tries to access ResetPassword, redirect to home
+    return next({ name: 'home' })
   }
 
   // If the user is authenticated and trying to access login or reset password, redirect to home
