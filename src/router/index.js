@@ -36,9 +36,7 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach(async (to, from, next) => {
-  const isLoggedIn = await authState.isAuthenticated()
-
+router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect unauthenticated users to login
   } else {
@@ -46,16 +44,15 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (to.name === 'ResetPassword') {
-    // If the user is logged in, redirect to the home page
-    if (isLoggedIn) {
-      return { name: 'home' } // Redirect logged-in users to home
+    if (authState.isAuthenticated) {
+      return next({ name: 'home' }) // Redirect logged-in users to home
     }
 
     if (!to.query.access_token) {
-      return { name: 'login' } // Redirect to login if no token is present
+      return next({ name: 'login' }) // Redirect to login if no token is present
     }
 
-    return true // Allow access if the token exists and the user is not logged in
+    return next() // Allow access if the token exists and the user is not logged in
   }
 })
 
