@@ -1,31 +1,32 @@
 <script setup>
 import { ref } from 'vue'
-import { supabase } from '@/stores/supabase'
-import { useRouter } from 'vue-router'
-
-const props = defineProps({
-  accessToken: {
-    type: String,
-    required: false, // Make it optional
-    default: '' // Set a default empty string if not passed
-  }
-})
+import { useRouter } from 'vue-router' // Import useRouter for navigation
+import { supabase } from '@/stores/supabase' // Import your supabase instance
 
 const newPassword = ref('')
 const confirmPassword = ref('')
+const valid = ref(true)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const router = useRouter() // Initialize the router
 
-const router = useRouter()
+// Validation rules
+const rules = {
+  required: (value) => !!value || 'Required.',
+  passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long'
+}
 
-console.log('Access Token in ResetPasswordForm:', props.accessToken)
+// Custom validation rule for matching passwords
+const confirmPasswordMatch = (v) => v === newPassword.value || 'Passwords do not match'
 
+// Method to update the password
 async function updatePassword() {
   loading.value = true
   errorMessage.value = ''
   successMessage.value = ''
 
+  // Check if passwords match
   if (newPassword.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match.'
     loading.value = false
@@ -34,22 +35,23 @@ async function updatePassword() {
 
   try {
     const { error } = await supabase.auth.updateUser({
-      password: newPassword.value,
-      access_token: props.accessToken
+      password: newPassword.value
     })
 
     if (error) {
       throw error
     }
 
-    successMessage.value = 'Password updated successfully! Redirecting to login...'
+    successMessage.value = 'Password updated successfully!'
     newPassword.value = ''
     confirmPassword.value = ''
 
-    setTimeout(() => router.push('/login'), 2000)
+    // Redirect to the login page after successful password update
+    setTimeout(() => {
+      router.push('/login') // Use the path of your login route
+    }, 1000) // Optional: Delay for 1 second before redirecting
   } catch (error) {
-    errorMessage.value = 'An error occurred: ' + error.message
-    console.error('Password reset error:', error)
+    errorMessage.value = 'Error: ' + error.message
   } finally {
     loading.value = false
   }
@@ -57,8 +59,9 @@ async function updatePassword() {
 </script>
 
 <template>
-  <v-form @keyup.enter="updatePassword">
-    <!-- New Password -->
+  <v-form v-model="valid" lazy-validation @keyup.enter="updatePassword">
+    <!-- Trigger on Enter key -->
+    <!-- New Password field -->
     <v-text-field
       v-model="newPassword"
       :rules="[rules.required, rules.passwordMin]"
@@ -68,7 +71,7 @@ async function updatePassword() {
       required
     ></v-text-field>
 
-    <!-- Confirm Password -->
+    <!-- Confirm Password field -->
     <v-text-field
       v-model="confirmPassword"
       :rules="[rules.required, confirmPasswordMatch]"
@@ -78,17 +81,16 @@ async function updatePassword() {
       required
     ></v-text-field>
 
-    <!-- Error Alert -->
+    <!-- Display error message if there's an error -->
     <v-alert v-if="errorMessage" type="error" class="mt-4">
       {{ errorMessage }}
     </v-alert>
 
-    <!-- Success Alert -->
+    <!-- Display success message if password is updated successfully -->
     <v-alert v-if="successMessage" type="success" class="mt-4">
       {{ successMessage }}
     </v-alert>
 
-    <!-- Submit Button -->
     <v-row>
       <v-col class="text-right">
         <v-btn

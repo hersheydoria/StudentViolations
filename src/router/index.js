@@ -19,16 +19,7 @@ const router = createRouter({
       path: '/reset-password',
       name: 'ResetPassword',
       component: ResetPasswordView,
-      props: (route) => ({ accessToken: route.query.access_token }), // Pass accessToken as a prop
-      beforeEnter: (to, from, next) => {
-        const hasAccessToken =
-          to.query.access_token || window.location.hash.includes('access_token')
-        if (!hasAccessToken) {
-          next('/login') // Redirect to login if no access token is present
-        } else {
-          next() // Allow access if access token is found
-        }
-      }
+      props: (route) => ({ accessToken: route.query.access_token }) // Pass accessToken as a prop
     },
     {
       path: '/visitor',
@@ -45,11 +36,26 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
+  const isLoggedIn = await authState.isAuthenticated()
+
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     next('/login') // Redirect unauthenticated users to login
   } else {
     next() // Proceed with the route
+  }
+
+  if (to.name === 'ResetPassword') {
+    // If the user is logged in, redirect to the home page
+    if (isLoggedIn) {
+      return { name: 'home' } // Redirect logged-in users to home
+    }
+
+    if (!to.query.access_token) {
+      return { name: 'login' } // Redirect to login if no token is present
+    }
+
+    return true // Allow access if the token exists and the user is not logged in
   }
 })
 
