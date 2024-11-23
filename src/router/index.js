@@ -46,6 +46,21 @@ router.beforeEach((to, from, next) => {
 
   console.log('Route Guard:', { from, to })
 
+  // Check for token in the /reset-password route
+  if (to.name === 'ResetPassword') {
+    const token = new URLSearchParams(window.location.search).get('access_token')
+    console.log('Token from URL:', token)
+
+    if (!token) {
+      console.log('No access token found. Redirecting to login.')
+      return next({ name: 'login' }) // Redirect to login if token is missing
+    }
+    // Proceed to ResetPassword route if the token is valid
+    else {
+      console.log('Access token found. Proceeding to reset-password page.')
+    }
+  }
+
   // Case 1: If the route requires auth and the user is not authenticated, redirect to login
   if (requiresAuth && !isAuthenticated) {
     console.log('Unauthenticated user trying to access protected route. Redirecting to login.')
