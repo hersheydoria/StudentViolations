@@ -1,40 +1,49 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router' // Import useRouter for navigation
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router' // Import useRouter and useRoute for navigation and token extraction
 import { supabase } from '@/stores/supabase' // Import your supabase instance
+import { authState } from '@/main'
 
-// Receive the access token as a prop
-const props = defineProps({
-  accessToken: {
-    type: String,
-    required: true
-  }
-})
-
+// Form state and validation
 const newPassword = ref('')
 const confirmPassword = ref('')
 const valid = ref(true)
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const router = useRouter() // Initialize the router
+
+// Token and router instance
+const route = useRoute()
+const router = useRouter()
+const token = ref(null) // Token from query parameter
 
 // Validation rules
 const rules = {
   required: (value) => !!value || 'Required.',
-  passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long'
+  passwordMin: (v) => v.length >= 5 || 'Password must be at least 5 characters long',
+  confirmPasswordMatch: (v) => v === newPassword.value || 'Passwords do not match'
 }
 
-// Custom validation rule for matching passwords
-const confirmPasswordMatch = (v) => v === newPassword.value || 'Passwords do not match'
+// Verify the token on component mount
+onMounted(() => {
+  token.value = route.query.access_token // Extract token from URL
+  if (!token.value) {
+    errorMessage.value = 'Invalid or missing token.'
+  }
+})
 
-// Method to update the password
+// Update password method
 async function updatePassword() {
   loading.value = true
   errorMessage.value = ''
   successMessage.value = ''
 
-  // Check if passwords match
+  if (!token.value) {
+    errorMessage.value = 'Invalid or missing token. Please request a new reset link.'
+    loading.value = false
+    return
+  }
+
   if (newPassword.value !== confirmPassword.value) {
     errorMessage.value = 'Passwords do not match.'
     loading.value = false
@@ -42,14 +51,6 @@ async function updatePassword() {
   }
 
   try {
-    // Check if access token exists before trying to update the password
-    if (!props.accessToken) {
-      errorMessage.value = 'No access token provided.'
-      loading.value = false
-      return
-    }
-
-    // Use the access token to update the password (if needed by your auth system)
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value
     })
@@ -58,14 +59,20 @@ async function updatePassword() {
       throw error
     }
 
-    successMessage.value = 'Password updated successfully!'
+    successMessage.value = 'Password updated successfully! Redirecting to login...'
     newPassword.value = ''
     confirmPassword.value = ''
 
-    // Redirect to the login page after successful password update
+    // Sign out the user after a successful password update
+    await supabase.auth.signOut()
+
+    // Reset password recovery state after successful password update
+    authState.isPasswordRecovery = false
+
+    // Redirect to login page after success
     setTimeout(() => {
-      router.push('/login') // Use the path of your login route
-    }, 1000) // Optional: Delay for 1 second before redirecting
+      router.push('/login') // Adjust to your login route
+    }, 3000) // Short delay for user feedback
   } catch (error) {
     errorMessage.value = 'Error: ' + error.message
   } finally {
@@ -85,6 +92,7 @@ async function updatePassword() {
       prepend-icon="mdi-lock"
       type="password"
       required
+      :disabled="!token || loading"
     ></v-text-field>
 
     <!-- Confirm Password field -->
@@ -95,6 +103,7 @@ async function updatePassword() {
       prepend-icon="mdi-lock"
       type="password"
       required
+      :disabled="!token || loading"
     ></v-text-field>
 
     <!-- Display error message if there's an error -->
@@ -107,6 +116,7 @@ async function updatePassword() {
       {{ successMessage }}
     </v-alert>
 
+    <!-- Submit button -->
     <v-row>
       <v-col class="text-right">
         <v-btn
@@ -114,6 +124,7 @@ async function updatePassword() {
           color="customGreen"
           @click="updatePassword"
           style="width: 100%; height: 40px; font-size: 18px"
+          :disabled="!token || loading"
         >
           Update Password
         </v-btn>
