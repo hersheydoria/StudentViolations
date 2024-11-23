@@ -44,7 +44,7 @@ const getAccessToken = () => {
 }
 
 router.beforeEach((to, from, next) => {
-  // Handle routes that require authentication
+  // Handle routes that require authentication (requiresAuth = true)
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     return next('/login') // Redirect unauthenticated users to login
   }
@@ -56,26 +56,22 @@ router.beforeEach((to, from, next) => {
     const accessToken = getAccessToken() // Extract access token from URL hash
     console.log('Access Token:', accessToken)
 
-    // If no access token is found in the URL, redirect to login
+    // If no access token is found, redirect to login
     if (!accessToken) {
       return next({ name: 'login' })
     }
 
-    // If the user is authenticated, redirect to home
-    if (authState.isAuthenticated) {
-      return next({ name: 'home' })
-    }
-
-    // Allow access to ResetPassword route if access token is present and user is not authenticated
+    // If there's an access token, allow access to ResetPassword even if not authenticated
     return next()
   }
 
-  // If the user is authenticated, redirect to home if trying to access login or reset password routes
+  // If the user is authenticated and trying to access login or reset password, redirect to home
   if (authState.isAuthenticated && (to.name === 'login' || to.name === 'ResetPassword')) {
-    return next({ name: 'home' })
+    return next({ name: 'home' }) // Redirect authenticated users from login or reset password to home
   }
 
-  next() // Default behavior for other routes
+  // Default behavior for other routes
+  next()
 })
 
 export default router
