@@ -36,28 +36,36 @@ const router = createRouter({
   ]
 })
 
+// Function to extract access token from URL hash
+const getAccessToken = () => {
+  const hash = window.location.hash.substr(1) // Remove the leading '#'
+  const params = new URLSearchParams(hash)
+  return params.get('access_token') // Retrieve the access_token
+}
+
 router.beforeEach((to, from, next) => {
-  console.log('Navigating to:', to.name)
-  console.log('Query parameters:', to.query)
+  if (to.meta.requiresAuth && !authState.isAuthenticated) {
+    return next('/login') // Redirect unauthenticated users to login
+  }
 
   if (to.name === 'ResetPassword') {
     console.log('Accessing ResetPassword route')
-    console.log('Access Token:', to.query.access_token)
+
+    const accessToken = getAccessToken() // Use the helper function
+    console.log('Access Token:', accessToken)
+
     if (authState.isAuthenticated) {
-      console.log('User is authenticated, redirecting to home')
-      return next({ name: 'home' })
+      return next({ name: 'home' }) // Redirect logged-in users to home
     }
 
-    if (!to.query.access_token) {
-      console.log('No access token found, redirecting to login')
-      return next({ name: 'login' })
+    if (!accessToken) {
+      return next({ name: 'login' }) // Redirect to login if no token is present
     }
 
-    console.log('Access token exists, allowing navigation')
-    return next()
+    return next() // Allow access if the token exists
   }
 
-  next()
+  next() // Default behavior for other routes
 })
 
 export default router
