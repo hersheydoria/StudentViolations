@@ -3,6 +3,14 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router' // Import useRouter for navigation
 import { supabase } from '@/stores/supabase' // Import your supabase instance
 
+// Receive the access token as a prop
+const props = defineProps({
+  accessToken: {
+    type: String,
+    required: true
+  }
+})
+
 const newPassword = ref('')
 const confirmPassword = ref('')
 const valid = ref(true)
@@ -34,6 +42,14 @@ async function updatePassword() {
   }
 
   try {
+    // Check if access token exists before trying to update the password
+    if (!props.accessToken) {
+      errorMessage.value = 'No access token provided.'
+      loading.value = false
+      return
+    }
+
+    // Use the access token to update the password (if needed by your auth system)
     const { error } = await supabase.auth.updateUser({
       password: newPassword.value
     })
