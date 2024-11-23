@@ -37,28 +37,26 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  // Authentication check for routes requiring auth
-  if (to.meta.requiresAuth && !authState.isAuthenticated) {
-    return next('/login') // Redirect unauthenticated users to login
-  }
+  console.log('Navigating to:', to.name)
+  console.log('Query parameters:', to.query)
 
-  // ResetPassword route access control
   if (to.name === 'ResetPassword') {
+    console.log('Accessing ResetPassword route')
+    console.log('Access Token:', to.query.access_token)
     if (authState.isAuthenticated) {
-      // If the user is logged in, redirect them to the home page
+      console.log('User is authenticated, redirecting to home')
       return next({ name: 'home' })
     }
 
     if (!to.query.access_token) {
-      // If no access token is present in the query, redirect to login
+      console.log('No access token found, redirecting to login')
       return next({ name: 'login' })
     }
 
-    // Allow access if the access token exists
+    console.log('Access token exists, allowing navigation')
     return next()
   }
 
-  // Default navigation behavior
   next()
 })
 
