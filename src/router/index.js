@@ -61,13 +61,14 @@ router.beforeEach((to, from, next) => {
       return next({ name: 'login' })
     }
 
-    // Allow access to ResetPassword even if not authenticated, but make sure not to redirect to home if already authenticated
+    // Allow access to ResetPassword even if not authenticated
     return next()
   }
 
   // If the user is authenticated and trying to access login or reset password, redirect to home
-  if (authState.isAuthenticated && (to.name === 'login' || to.name === 'ResetPassword')) {
-    return next({ name: 'home' }) // Redirect authenticated users from login or reset password to home
+  // But exclude the reset password route from this check
+  if (authState.isAuthenticated && to.name === 'login') {
+    return next({ name: 'home' }) // Redirect authenticated users from login to home
   }
 
   // Default behavior for other routes
