@@ -17,10 +17,9 @@ const router = createRouter({
     },
     {
       path: '/reset-password',
-      name: 'reset-password',
+      name: 'ResetPassword',
       component: ResetPasswordView,
-      props: (route) => ({ accessToken: route.query.access_token }), // Pass accessToken as a prop
-      meta: { requiresAuth: false } // No authentication required for reset password
+      props: (route) => ({ accessToken: route.query.access_token }) // Pass accessToken as a prop
     },
     {
       path: '/visitor',
@@ -37,34 +36,43 @@ const router = createRouter({
   ]
 })
 
-// Function to extract access token from URL query
+// Function to extract access token from URL hash
 const getAccessToken = () => {
-  const params = new URLSearchParams(window.location.search) // Use search for query params
+  const hash = window.location.hash.substr(1) // Remove the leading '#'
+  const params = new URLSearchParams(hash)
   return params.get('access_token') // Retrieve the access_token
 }
 
 router.beforeEach((to, from, next) => {
+  // Handle routes that require authentication
   if (to.meta.requiresAuth && !authState.isAuthenticated) {
     return next('/login') // Redirect unauthenticated users to login
   }
 
-  if (to.name === 'reset-password') {
+  // Handle ResetPassword route access
+  if (to.name === 'ResetPassword') {
     console.log('Accessing ResetPassword route')
 
-    const accessToken = getAccessToken() // Get access token from URL query
+    const accessToken = getAccessToken() // Extract access token from URL hash
     console.log('Access Token:', accessToken)
 
+    // If no access token is found in the URL, redirect to login
     if (!accessToken) {
-      // If no access token is found, redirect to login
       return next({ name: 'login' })
     }
 
-    // Allow access to ResetPassword even if authenticated (you can adjust this if needed)
+    // If the user is authenticated, redirect to home
+    if (authState.isAuthenticated) {
+      return next({ name: 'home' })
+    }
+
+    // Allow access to ResetPassword route if access token is present and user is not authenticated
     return next()
   }
 
-  if (authState.isAuthenticated && (to.name === 'login' || to.name === 'reset-password')) {
-    return next({ name: 'home' }) // Redirect authenticated users from login or reset-password to home
+  // If the user is authenticated, redirect to home if trying to access login or reset password routes
+  if (authState.isAuthenticated && (to.name === 'login' || to.name === 'ResetPassword')) {
+    return next({ name: 'home' })
   }
 
   next() // Default behavior for other routes
