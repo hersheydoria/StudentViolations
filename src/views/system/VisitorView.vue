@@ -160,7 +160,8 @@ const {
                 :items="selectedStudent.records"
                 item-value="id"
                 class="mt-5"
-                :footer-props="{ 'items-per-page-options': [] }"
+                :items-per-page="5"
+                :footer-props="{ 'items-per-page-options': [5] }"
                 style="background-color: #e6ffb1"
               >
                 <!-- Guard Name Slot -->

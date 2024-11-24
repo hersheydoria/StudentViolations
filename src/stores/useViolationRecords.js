@@ -21,6 +21,11 @@ export function useViolationRecords() {
   const history = ref([])
   const user = ref(null)
   const loading = ref(false)
+  const searchQuery = ref('') // Must be initialized as a string
+  const showUnblockModal = ref(false) // Unblock modal state
+  const selectedViolation = ref(null) // To hold the currently selected violation for unblocking
+  const filteredBlockedViolations = ref([]) // Holds filtered results
+  const selectedStudentId = ref('') // Holds the selected student ID
 
   const headers = [
     { text: 'Student ID', value: 'student_id' },
@@ -47,10 +52,11 @@ export function useViolationRecords() {
 
   const newViolation = ref({
     studentId: '',
-    studentName: '',
+    student_name: '',
     qrCode: '',
     type: ''
   })
+
   const fetchViolations = async () => {
     loading.value = true
     try {
@@ -62,13 +68,13 @@ export function useViolationRecords() {
         },
         params: {
           select: `
-            id,
-            violation_type,
-            violation_date,
-            status,
-            recorded_by,
-            student_id
-          `
+          id,
+          violation_type,
+          violation_date,
+          status,
+          recorded_by,
+          student_id
+        `
         }
       })
 
@@ -90,15 +96,18 @@ export function useViolationRecords() {
         }
       }
 
-      // Fetch student details
+      // Fetch student details, including names
       for (const studentId of studentIds) {
         const student = await getStudentByStudentId(studentId)
         if (student) {
-          studentsMap[studentId] = student.student_number
+          studentsMap[studentId] = {
+            student_number: student.student_number,
+            full_name: `${student.first_name || 'Unknown'} ${student.last_name || ''}`
+          }
         }
       }
 
-      // Map blocked violations with guard names and student numbers
+      // Map blocked violations with guard names and student details
       violations.value = blockedViolations.map((violation) => ({
         id: violation.id,
         violation_type: violation.violation_type,
@@ -109,7 +118,8 @@ export function useViolationRecords() {
         guardFullName: guardsMap[violation.recorded_by]
           ? `${guardsMap[violation.recorded_by].first_name || 'Unknown'} ${guardsMap[violation.recorded_by].last_name || ''}`
           : 'Unknown Guard',
-        student_id: studentsMap[violation.student_id] || 'Unknown'
+        student_id: studentsMap[violation.student_id]?.student_number || 'Unknown',
+        student_name: studentsMap[violation.student_id]?.full_name || 'Unknown Student'
       }))
 
       // Map unblocked violations directly to the history
@@ -123,7 +133,8 @@ export function useViolationRecords() {
         guardFullName: guardsMap[violation.recorded_by]
           ? `${guardsMap[violation.recorded_by].first_name || 'Unknown'} ${guardsMap[violation.recorded_by].last_name || ''}`
           : 'Unknown Guard',
-        student_id: studentsMap[violation.student_id] || 'Unknown'
+        student_id: studentsMap[violation.student_id]?.student_number || 'Unknown',
+        student_name: studentsMap[violation.student_id]?.full_name || 'Unknown Student'
       }))
     } catch (error) {
       console.error('Error fetching student violations:', error)
@@ -191,9 +202,6 @@ export function useViolationRecords() {
   const showStudentDetails = (studentId) => {
     // Normalize the incoming studentId
     const normalizedId = normalizeId(studentId)
-
-    // Debug: log the normalized student IDs in students.value
-    const studentIds = students.value.map((s) => normalizeId(s.student_number))
 
     // Find student by normalized student number
     const student = students.value.find((s) => normalizeId(s.student_number) === normalizedId)
@@ -263,6 +271,42 @@ export function useViolationRecords() {
       return
     }
 
+    // Validate if the student_number exists in Supabase
+    try {
+      console.log('Validating student number:', studentInfo)
+
+      const { data: studentData, error: fetchError } = await axios.get(
+        `${SUPABASE_URL}/rest/v1/students`,
+        {
+          params: {
+            student_number: `eq.${studentInfo}`, // Use "eq" filter for student_number
+            select: 'student_number' // Select only the student_number field
+          },
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`
+          }
+        }
+      )
+
+      console.log('Supabase Response:', { studentData, fetchError })
+
+      if (fetchError) {
+        console.error('Fetch Error:', fetchError)
+        alert(`Error fetching student data: ${fetchError.message}`)
+        return
+      }
+
+      if (!studentData || studentData.length === 0) {
+        alert(`Student Number ${studentInfo} not found in the system.`)
+        return // Exit if student number does not exist
+      }
+    } catch (err) {
+      console.error('Error validating student number:', err.response?.data || err.message)
+      alert('Failed to validate the student number. Please try again later.')
+      return
+    }
+
     const guardId = user.value?.id || 'Unknown' // Use the UUID from auth.users
     if (!guardId || guardId === 'Unknown') {
       alert('No user is currently signed in.')
@@ -325,7 +369,7 @@ export function useViolationRecords() {
 
   const resetForm = () => {
     newViolation.value.studentId = ''
-    newViolation.value.studentName = ''
+    newViolation.value.student_name = ''
     newViolation.value.qrCode = ''
     newViolation.value.type = ''
     showForm.value = false
@@ -344,7 +388,7 @@ export function useViolationRecords() {
 
     try {
       // Send a PATCH request to Supabase to update the status
-      const { data, error } = await axios.patch(
+      const { error } = await axios.patch(
         `${SUPABASE_URL}/rest/v1/student_violations?id=eq.${violationId}`,
         { status: 'Unblocked' },
         {
@@ -362,6 +406,11 @@ export function useViolationRecords() {
         alert('Failed to unblock the violation. Please try again.')
         return
       }
+
+      // Remove the unblocked violation from filteredBlockedViolations
+      filteredBlockedViolations.value = filteredBlockedViolations.value.filter(
+        (violation) => violation.id !== violationId
+      )
 
       // Move the unblocked violation from `violations` to `history` in local state
       history.value.push(unblockedViolation)
@@ -394,11 +443,13 @@ export function useViolationRecords() {
   }
 
   const findStudentByName = () => {
-    const student = students.value.find(
-      (student) => student.name === newViolation.value.studentName
-    )
+    const query = newViolation.value.student_name.toLowerCase()
+
+    // Check if the student name exists in the list of students
+    const student = students.value.find((student) => student.fullname.toLowerCase() === query)
+
     if (student) {
-      newViolation.value.studentId = normalizeId(student.id)
+      newViolation.value.studentId = normalizeId(student.student_number)
     } else {
       console.error('Student not found')
     }
@@ -443,6 +494,64 @@ export function useViolationRecords() {
     return date.toLocaleString('en-US', options)
   }
 
+  // Unblock all violations for the selected student
+  const onUnblockAll = async () => {
+    if (!selectedStudentId.value) {
+      alert('Please search for a valid student ID!')
+      return
+    }
+
+    const studentId = selectedStudentId.value
+
+    // Filter violations for the given student ID
+    const violationsToUnblock = filteredBlockedViolations.value.filter(
+      (violation) => violation.student_id === studentId
+    )
+
+    if (!violationsToUnblock.length) {
+      alert(`No violations found for student ID: ${studentId}`)
+      return
+    }
+
+    try {
+      for (const violation of violationsToUnblock) {
+        await unblockViolation(violation.id)
+      }
+
+      alert(`All violations for student ${studentId} have been unblocked.`)
+      fetchViolations() // Refresh the list after unblocking
+      showUnblockModal.value = false // Close the modal
+    } catch (error) {
+      console.error('Failed to unblock all violations:', error)
+      alert('An error occurred while unblocking violations.')
+    }
+  }
+
+  // Method to perform the search
+  const searchViolations = () => {
+    const query = searchQuery.value.trim().toLowerCase()
+    selectedStudentId.value = query
+
+    if (!query) {
+      filteredBlockedViolations.value = violations.value // Show all results if query is empty
+      return
+    }
+
+    filteredBlockedViolations.value = violations.value.filter((violation) => {
+      const studentId = violation.student_id ? violation.student_id.toLowerCase() : ''
+
+      // Return true if the student ID matches the query
+      return studentId.includes(query)
+    })
+  }
+
+  const closeUnblockModal = () => {
+    selectedViolation.value = null // Clear the selected violation
+    showUnblockModal.value = false // Close the modal
+    searchQuery.value = '' // Clear the search query inside the modal
+    filteredBlockedViolations.value = [] // Clear the filtered list shown in the modal
+  }
+
   return {
     showForm,
     showLeftSidebar,
@@ -471,6 +580,13 @@ export function useViolationRecords() {
     onQrCodeScanned,
     onError,
     fetchViolations,
-    removeViolation
+    removeViolation,
+    showUnblockModal,
+    selectedViolation,
+    closeUnblockModal,
+    searchQuery,
+    filteredBlockedViolations,
+    searchViolations,
+    onUnblockAll
   }
 }

@@ -30,8 +30,20 @@ const {
   onError,
   user,
   removeViolation,
-  formatDate
+  formatDate,
+  showUnblockModal,
+  searchQuery,
+  filteredBlockedViolations,
+  searchViolations,
+  onUnblockAll,
+  closeUnblockModal
 } = useViolationRecords()
+
+// Validation function for the input
+const validateInput = (value) => {
+  const regex = /^[0-9-]*$/ // Only numbers and hyphens
+  return regex.test(value) || "Only numbers and '-' are allowed."
+}
 
 // Fetch violations on component mount
 onMounted(() => {
@@ -117,6 +129,11 @@ const onRemoveViolation = async (id) => {
       <v-main>
         <v-container fluid>
           <v-row class="d-flex justify-end align-center">
+            <v-col cols="auto">
+              <v-btn @click="showUnblockModal = true" color="#286643" class="customGreen">
+                Search to Unblock
+              </v-btn>
+            </v-col>
             <v-col cols="auto">
               <v-btn
                 @click="showForm = true"
@@ -234,6 +251,85 @@ const onRemoveViolation = async (id) => {
           </v-dialog>
 
           <v-dialog
+            v-model="showUnblockModal"
+            max-width="600px"
+            elevation="10"
+            style="backdrop-filter: blur(8px)"
+          >
+            <v-card class="px-6 py-6" elevation="12" rounded="xl" style="background-color: #e6ffb1">
+              <v-card-title>
+                <span><strong>SEARCH AND UNBLOCK</strong></span>
+              </v-card-title>
+              <v-text-field
+                v-model="searchQuery"
+                label="Search by ID"
+                clearable
+                @keyup.enter="searchViolations"
+                :rules="[validateInput]"
+                class="mb-4"
+                dense
+              >
+                <template #append>
+                  <v-btn color="customGreen" @click="searchViolations" icon>
+                    <v-icon>mdi-magnify</v-icon>
+                  </v-btn>
+                </template>
+              </v-text-field>
+
+              <v-btn class="mb-4" color="red" block @click="onUnblockAll">
+                {{
+                  filteredBlockedViolations.length
+                    ? `Unblock All for Student ID ${filteredBlockedViolations[0]?.studentId || 'UNKNOWN'}`
+                    : 'NO DATA AVAILABLE'
+                }}
+              </v-btn>
+
+              <v-data-table
+                :headers="[
+                  {
+                    text: 'ID Number',
+                    value: 'student_id'
+                  },
+                  {
+                    text: 'Violation Type',
+                    value: 'violation_type'
+                  },
+                  {
+                    text: 'Action',
+                    value: 'action',
+                    sortable: false
+                  }
+                ]"
+                :items="filteredBlockedViolations"
+                item-value="id"
+                style="background-color: #e6ffb1"
+                :items-per-page="5"
+                :footer-props="{ 'items-per-page-options': [5] }"
+              >
+                <!-- Slots for displaying table data -->
+                <template v-slot:item.student_id="{ item }">
+                  <span v-if="item.student_id">
+                    <v-btn @click="showStudentDetails(item.student_id)" color="green" text>
+                      {{ item.student_id }}
+                    </v-btn>
+                  </span>
+                  <span v-else>No Student Data</span>
+                </template>
+                <template v-slot:item.violation_type="{ item }">
+                  <span>{{ item.violation_type }}</span>
+                </template>
+                <template v-slot:item.action="{ item }">
+                  <v-btn color="green" @click="unblockViolation(item.id)"> Unblock </v-btn>
+                </template>
+              </v-data-table>
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn @click="closeUnblockModal">Close</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+          <v-dialog
             v-model="showForm"
             max-width="600px"
             elevation="10"
@@ -345,7 +441,8 @@ const onRemoveViolation = async (id) => {
                   :items="history"
                   item-value="id"
                   class="mt-5"
-                  :footer-props="{ 'items-per-page-options': [] }"
+                  :items-per-page="5"
+                  :footer-props="{ 'items-per-page-options': [5] }"
                   style="background-color: #e6ffb1"
                 >
                   <!-- Student ID Slot with Details -->
