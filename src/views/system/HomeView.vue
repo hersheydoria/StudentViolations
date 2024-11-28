@@ -12,7 +12,6 @@ const {
   violations,
   history,
   headers,
-  violationTypes,
   addViolation,
   unblockViolation,
   logout,
@@ -36,7 +35,10 @@ const {
   filteredBlockedViolations,
   searchViolations,
   onUnblockAll,
-  closeUnblockModal
+  closeUnblockModal,
+  showOtherViolationField,
+  handleViolationTypeChange,
+  violationTypesWithOthers
 } = useViolationRecords()
 
 // Validation function for the input
@@ -48,6 +50,7 @@ const validateInput = (value) => {
 // Fetch violations on component mount
 onMounted(() => {
   fetchViolations()
+  showOtherViolationField.value = true
 })
 
 // Function to remove a violation
@@ -345,6 +348,7 @@ const onRemoveViolation = async (id) => {
                     <v-radio label="QR Code" value="qrCode" />
                   </v-radio-group>
 
+                  <!-- ID Number Field -->
                   <v-text-field
                     v-if="selectedMethod === 'idNumber'"
                     label="ID Number"
@@ -354,6 +358,7 @@ const onRemoveViolation = async (id) => {
                     :rules="[(v) => /^[0-9-]+$/.test(v) || 'Only numbers and hyphens are allowed']"
                   ></v-text-field>
 
+                  <!-- Name Fields -->
                   <div v-if="selectedMethod === 'name'">
                     <v-text-field
                       label="First Name"
@@ -368,6 +373,7 @@ const onRemoveViolation = async (id) => {
                     ></v-text-field>
                   </div>
 
+                  <!-- QR Code -->
                   <v-btn
                     v-if="selectedMethod === 'qrCode'"
                     @click="showQrScanner = true"
@@ -383,12 +389,28 @@ const onRemoveViolation = async (id) => {
                     </p>
                   </div>
 
+                  <!-- Violation Type -->
                   <v-select
                     label="Violation Type"
                     v-model="newViolation.type"
-                    :items="violationTypes"
+                    :items="violationTypesWithOthers"
+                    @change="handleViolationTypeChange"
                     required
                   ></v-select>
+
+                  <!-- Show "Others" text field conditionally -->
+                  <div v-if="showOtherViolationField">
+                    <!-- Informational Text -->
+                    <v-alert type="info" elevation="2" class="mb-2" color="customGreen">
+                      Please specify the violation as you selected the "Others" option.
+                    </v-alert>
+                    <!-- Text Field -->
+                    <v-text-field
+                      label="Specify Violation"
+                      v-model="newViolation.otherType"
+                      required
+                    />
+                  </div>
                 </v-form>
               </v-card-text>
               <v-card-actions>

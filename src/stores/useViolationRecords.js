@@ -1,4 +1,4 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { v4 as uuidv4 } from 'uuid'
@@ -37,25 +37,38 @@ export function useViolationRecords() {
   ]
 
   const violationTypes = [
-    'Abuse Code Ceremony',
-    'Blocking Publication',
-    'Bribery Receiving Bribe',
-    'Disregard Code Conduct',
-    'Disruption Obstruction',
-    'Dress Code',
+    'Abuse of University Code of Conduct',
+    'Blatant disregard for the Code of Student Conduct',
+    'Bribery or receiving a bribe',
+    'Disruption or obstruction',
+    'Dress code violation',
     'Gambling',
-    'Having Abusive Affiliation',
-    'Ignoring Flag Ceremony',
-    'Not Wearing ID',
-    'Violating Policies'
+    'Hazing or abusive affiliation',
+    'Disregard for flag ceremonies or acts dishonoring the University',
+    'Not wearing ID',
+    'Restricting student publication circulation',
+    'Unauthorized use of CSU name or logo',
+    'Violating university policies or agreements'
   ]
 
+  // Add "Others" option dynamically
+  const violationTypesWithOthers = computed(() => [...violationTypes, 'Others'])
+
+  // New Violation
   const newViolation = ref({
     studentId: '',
     student_name: '',
     qrCode: '',
-    type: ''
+    type: '',
+    otherType: '' // Holds the "Others" value
   })
+
+  // Reactive state for showing the "Others" text field
+  const showOtherViolationField = ref(false)
+
+  const handleViolationTypeChange = () => {
+    showOtherViolationField.value = newViolation.value.type === 'Others'
+  }
 
   const fetchViolations = async () => {
     loading.value = true
@@ -271,6 +284,15 @@ export function useViolationRecords() {
       return
     }
 
+    // Handle custom violation type for "Others"
+    const violationType =
+      newViolation.value.type === 'Others' ? newViolation.value.otherType : newViolation.value.type
+
+    if (!violationType) {
+      alert('Please specify the violation type for "Others".')
+      return
+    }
+
     // Validate if the student_number exists in Supabase
     try {
       console.log('Validating student number:', studentInfo)
@@ -316,7 +338,7 @@ export function useViolationRecords() {
     const newViolationRecord = {
       id: uuidv4(),
       student_id: studentInfo,
-      violation_type: newViolation.value.type,
+      violation_type: violationType, // Use the resolved violation type
       violation_date: new Date().toLocaleString(), // Get local date and time string
       recorded_by: guardId, // UUID from auth.users
       status: 'Blocked'
@@ -367,11 +389,16 @@ export function useViolationRecords() {
     return data // Should return the student record including student_number
   }
 
+  // Reset form state
   const resetForm = () => {
-    newViolation.value.studentId = ''
-    newViolation.value.student_name = ''
-    newViolation.value.qrCode = ''
-    newViolation.value.type = ''
+    newViolation.value = {
+      studentId: '',
+      student_name: '',
+      qrCode: '',
+      type: '',
+      otherType: ''
+    }
+    showOtherViolationField.value = false
     showForm.value = false
   }
 
@@ -587,6 +614,9 @@ export function useViolationRecords() {
     searchQuery,
     filteredBlockedViolations,
     searchViolations,
-    onUnblockAll
+    onUnblockAll,
+    showOtherViolationField,
+    handleViolationTypeChange,
+    violationTypesWithOthers
   }
 }
